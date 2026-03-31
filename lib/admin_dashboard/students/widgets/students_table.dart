@@ -457,9 +457,9 @@ class _ActionGroup extends StatelessWidget {
           onTap: () => onEdit(student),
         ),
         _ActionButton(
-          label: 'Message',
-          icon: Icons.chat_bubble_outline_rounded,
-          color: AppColors.aquamarine,
+          label: 'Delete',
+          icon: Icons.delete_outline,
+          color: AppColors.strawberryRed,
           compact: compact,
           onTap: () => onMessage(student),
         ),
@@ -618,6 +618,8 @@ class StudentRecord {
     required this.weeklyCheckIns,
     required this.missedLogs,
     this.notes,
+    this.isDeleted = false,
+    this.deletedAt,
   });
 
   final String id;
@@ -639,6 +641,8 @@ class StudentRecord {
   final int weeklyCheckIns;
   final int missedLogs;
   final String? notes;
+  final bool isDeleted;
+  final DateTime? deletedAt;
 
   StudentRecord copyWith({
     String? id,
@@ -660,6 +664,8 @@ class StudentRecord {
     int? weeklyCheckIns,
     int? missedLogs,
     String? notes,
+    bool? isDeleted,
+    DateTime? deletedAt,
   }) {
     return StudentRecord(
       id: id ?? this.id,
@@ -681,6 +687,8 @@ class StudentRecord {
       weeklyCheckIns: weeklyCheckIns ?? this.weeklyCheckIns,
       missedLogs: missedLogs ?? this.missedLogs,
       notes: notes ?? this.notes,
+      isDeleted: isDeleted ?? this.isDeleted,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 
@@ -694,7 +702,7 @@ class StudentRecord {
       name: _readString(data['name'] ?? data['fullName'], 'Unnamed Student'),
       email: _readString(data['email']),
       rollNumber: _readRollNumber(data, doc.id),
-      department: _readString(data['department'], 'Unassigned'),
+      department: _readString(data['department'] ?? data['dept'], 'Unassigned'),
       year: StudentYear.fromFirestore(data['year']),
       company: _readString(data['companyName'] ?? data['company'], 'Not Assigned'),
       internshipRole: _readString(
@@ -776,6 +784,8 @@ class StudentRecord {
         fallback: 0,
       ),
       notes: _readNullableString(data['notes'] ?? data['remarks']),
+      isDeleted: data['isDeleted'] ?? false,
+      deletedAt: data['deletedAt'] is Timestamp ? (data['deletedAt'] as Timestamp).toDate() : null,
     );
   }
 

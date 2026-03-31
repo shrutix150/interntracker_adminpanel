@@ -372,6 +372,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
         usersSubscription = _firestore
             .collection('user')
             .where('role', isEqualTo: 'student')
+            .where('isDeleted', isNotEqualTo: true)
             .snapshots()
             .listen(
               (snapshot) {
@@ -623,7 +624,111 @@ class _StudentsScreenState extends State<StudentsScreen> {
   }
 
   void _handleMessage(StudentRecord student) {
-    _showActionFeedback('Messaging ${student.name}');
+    _showDeleteConfirmation(student);
+  }
+
+  Future<void> _showDeleteConfirmation(StudentRecord student) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete Student?'),
+          content: Text(
+            'Are you sure you want to delete ${student.name}? You can undo this action for a short time.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.strawberryRed,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true && mounted) {
+      await _performSoftDelete(student);
+    }
+  }
+
+  Future<void> _performSoftDelete(StudentRecord student) async {
+    try {
+      await _firestore
+          .collection('user')
+          .doc(student.id)
+          .update(<String, dynamic>{
+            'isDeleted': true,
+            'deletedAt': FieldValue.serverTimestamp(),
+          });
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Deleted ${student.name}',
+            style: const TextStyle(
+              color: AppColors.textOnDark,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          backgroundColor: const Color(0xFF1A1A1A),
+          behavior: SnackBarBehavior.floating,
+          elevation: 8,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          margin: const EdgeInsets.only(
+            bottom: 24,
+            left: 24,
+            right: 24,
+          ),
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'UNDO',
+            textColor: AppColors.coolSky,
+            onPressed: () => _performUndo(student),
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showActionFeedback('Failed to delete student. $error');
+    }
+  }
+
+  Future<void> _performUndo(StudentRecord student) async {
+    try {
+      await _firestore
+          .collection('user')
+          .doc(student.id)
+          .update(<String, dynamic>{
+            'isDeleted': false,
+          });
+
+      if (!mounted) {
+        return;
+      }
+
+      _showActionFeedback('${student.name} restored');
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showActionFeedback('Failed to undo delete. $error');
+    }
   }
 
   void _showActionFeedback(String message) {
