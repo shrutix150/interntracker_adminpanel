@@ -116,6 +116,14 @@ class _LineChartContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (data.points.isEmpty ||
+        data.points.every((DashboardLinePoint point) => point.value <= 0)) {
+      return const _ChartEmptyState(
+        message: 'No trend data available yet.',
+        icon: Icons.show_chart_rounded,
+      );
+    }
+
     final double highestValue = data.points
         .map((point) => point.value)
         .reduce((current, next) => current > next ? current : next);
@@ -272,6 +280,13 @@ class _DonutChartContent extends StatelessWidget {
       (sum, item) => sum + item.value,
     );
 
+    if (data.sections.isEmpty || total <= 0) {
+      return const _ChartEmptyState(
+        message: 'No internship status data available yet.',
+        icon: Icons.donut_small_rounded,
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final bool compact = constraints.maxWidth < 360;
@@ -305,6 +320,45 @@ class _DonutChartContent extends StatelessWidget {
                 ],
               );
       },
+    );
+  }
+}
+
+class _ChartEmptyState extends StatelessWidget {
+  const _ChartEmptyState({
+    required this.message,
+    required this.icon,
+  });
+
+  final String message;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(icon, color: AppColors.primary, size: 28),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

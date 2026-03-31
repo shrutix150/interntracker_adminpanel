@@ -70,7 +70,7 @@ class StudentDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Review internship, attendance, and mentor details.',
+                        'Review internship details and update live attendance records.',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary,
                         ),
@@ -232,10 +232,10 @@ class StudentDetailScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => onEdit(student),
-                    icon: const Icon(Icons.edit_rounded),
-                    label: const Text('Edit Student'),
+                    child: ElevatedButton.icon(
+                      onPressed: () => onEdit(student),
+                    icon: const Icon(Icons.update_rounded),
+                    label: const Text('Update Attendance'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.aquamarine,
                       foregroundColor: AppColors.textPrimary,

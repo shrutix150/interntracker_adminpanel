@@ -108,15 +108,15 @@ class CompanyDetailPanel extends StatelessWidget {
                       _DetailGrid(
                         children: <Widget>[
                           _InfoTile(label: 'Industry', value: company.industry),
-                          _InfoTile(label: 'Location', value: company.location),
+                          _InfoTile(label: 'Experience', value: company.experience),
                           _InfoTile(label: 'Website', value: company.website),
                           _InfoTile(
-                            label: 'HR / Contact Email',
+                            label: 'Email',
                             value: company.contactEmail,
                           ),
                           _InfoTile(
-                            label: 'Company Mentor',
-                            value: company.companyMentor,
+                            label: 'Phone',
+                            value: company.phone,
                           ),
                           _InfoTile(
                             label: 'Status',
@@ -133,7 +133,7 @@ class CompanyDetailPanel extends StatelessWidget {
                       _DetailGrid(
                         children: <Widget>[
                           _InfoTile(
-                            label: 'Assigned Students',
+                            label: 'Intern Count',
                             value: '${company.assignedStudents}',
                           ),
                           _InfoTile(
@@ -146,7 +146,7 @@ class CompanyDetailPanel extends StatelessWidget {
                   ),
                   const SizedBox(height: 18),
                   _DetailSection(
-                    title: 'Notes & Remarks',
+                    title: 'About',
                     children: <Widget>[
                       Container(
                         width: double.infinity,
@@ -157,7 +157,7 @@ class CompanyDetailPanel extends StatelessWidget {
                           border: Border.all(color: AppColors.border),
                         ),
                         child: Text(
-                          company.notes,
+                          company.about,
                           style: AppTextStyles.body.copyWith(
                             color: AppColors.textPrimary.withOpacity(0.76),
                             height: 1.55,
@@ -166,6 +166,38 @@ class CompanyDetailPanel extends StatelessWidget {
                       ),
                     ],
                   ),
+                  if (company.courses.isNotEmpty)
+                    const SizedBox(height: 18),
+                  if (company.courses.isNotEmpty)
+                    _DetailSection(
+                      title: 'Courses',
+                      children: company.courses
+                          .map(
+                            (course) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: Text(
+                                  course,
+                                  style: AppTextStyles.body.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(growable: false),
+                    ),
                   if (company.studentPreview.isNotEmpty)
                     const SizedBox(height: 18),
                   if (company.studentPreview.isNotEmpty)
@@ -332,7 +364,7 @@ class _ProfileCard extends StatelessWidget {
             runSpacing: 8,
             children: <Widget>[
               _MetaChip(label: company.industry, color: AppColors.jasmine),
-              _MetaChip(label: company.location, color: AppColors.coolSky),
+              _MetaChip(label: company.experience, color: AppColors.coolSky),
               _MetaChip(
                 label: company.status.label,
                 color: company.status.color,

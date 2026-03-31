@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../auth/admin_auth_controller.dart';
 import '../../core/constants/app_colors.dart';
 import 'admin_navigation_item.dart';
 import 'admin_sidebar.dart';
@@ -132,10 +133,23 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
   }
 
   void _handleNavigationSelection(AdminNavigationItem item) {
+    if (item == AdminNavigationItem.logout) {
+      _signOut();
+      return;
+    }
+
     setState(() {
       _selectedItem = item;
       _showQuickAlerts = false;
     });
+  }
+
+  Future<void> _signOut() async {
+    setState(() {
+      _showQuickAlerts = false;
+    });
+
+    await AdminAuthController.instance.signOut();
   }
 
   void _toggleQuickAlerts() {
@@ -450,7 +464,7 @@ const List<_QuickAlertData> _quickAlerts = <_QuickAlertData>[
   ),
   _QuickAlertData(
     title: 'Weekly report submitted by Aditi Sharma',
-    subtitle: 'Week 6 report has been added to the Reports queue.',
+    subtitle: 'Week 6 submission has been added for admin review.',
     time: '12 min ago',
     icon: Icons.description_rounded,
     color: AppColors.aquamarine,

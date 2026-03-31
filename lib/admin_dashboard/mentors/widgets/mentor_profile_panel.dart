@@ -117,6 +117,10 @@ class MentorProfilePanel extends StatelessWidget {
                             value: mentor.type.label,
                           ),
                           _InfoTile(
+                            label: 'Employee ID',
+                            value: mentor.employeeId,
+                          ),
+                          _InfoTile(
                             label: mentor.type == MentorType.faculty
                                 ? 'Department'
                                 : 'Company',
@@ -130,82 +134,14 @@ class MentorProfilePanel extends StatelessWidget {
                             label: 'Status',
                             value: mentor.status.label,
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  _DetailSection(
-                    title: 'Workload Overview',
-                    children: <Widget>[
-                      _DetailGrid(
-                        children: <Widget>[
                           _InfoTile(
-                            label: 'Assigned Students',
-                            value: '${mentor.assignedStudents}',
-                          ),
-                          _InfoTile(
-                            label: 'Active Internships',
-                            value: '${mentor.activeInternships}',
+                            label: 'Joined On',
+                            value: mentor.joinedOnLabel,
                           ),
                         ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
-                  _DetailSection(
-                    title: 'Notes & Remarks',
-                    children: <Widget>[
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Text(
-                          mentor.notes,
-                          style: AppTextStyles.body.copyWith(
-                            color: AppColors.textPrimary.withOpacity(0.76),
-                            height: 1.55,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (mentor.studentPreview.isNotEmpty)
-                    const SizedBox(height: 18),
-                  if (mentor.studentPreview.isNotEmpty)
-                    _DetailSection(
-                      title: 'Student Preview',
-                      children: mentor.studentPreview
-                          .map(
-                            (student) => Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.surface,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: AppColors.border),
-                                ),
-                                child: Text(
-                                  student,
-                                  style: AppTextStyles.body.copyWith(
-                                    color: AppColors.textPrimary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          )
-                          .toList(growable: false),
-                    ),
                 ],
               ),
             ),

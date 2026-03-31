@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
@@ -75,9 +76,9 @@ class CompaniesTable extends StatelessWidget {
                     SizedBox(width: 16),
                     _HeaderCell(label: 'Industry', flex: 2),
                     SizedBox(width: 16),
-                    _HeaderCell(label: 'Location', flex: 2),
+                    _HeaderCell(label: 'Experience', flex: 2),
                     SizedBox(width: 16),
-                    _HeaderCell(label: 'Company Mentor', flex: 2),
+                    _HeaderCell(label: 'Phone', flex: 2),
                     SizedBox(width: 16),
                     _HeaderCell(label: 'Assigned Students', flex: 2),
                     SizedBox(width: 16),
@@ -180,9 +181,9 @@ class _CompanyRowState extends State<_CompanyRow> {
             const SizedBox(width: 16),
             Expanded(flex: 2, child: _BodyText(widget.company.industry)),
             const SizedBox(width: 16),
-            Expanded(flex: 2, child: _BodyText(widget.company.location)),
+            Expanded(flex: 2, child: _BodyText(widget.company.experience)),
             const SizedBox(width: 16),
-            Expanded(flex: 2, child: _BodyText(widget.company.companyMentor)),
+            Expanded(flex: 2, child: _BodyText(widget.company.phone)),
             const SizedBox(width: 16),
             Expanded(
               flex: 2,
@@ -264,10 +265,10 @@ class _CompanyCardState extends State<_CompanyCard> {
             ),
             const SizedBox(height: 16),
             _CompactInfoRow(label: 'Industry', value: widget.company.industry),
-            _CompactInfoRow(label: 'Location', value: widget.company.location),
+            _CompactInfoRow(label: 'Experience', value: widget.company.experience),
             _CompactInfoRow(
-              label: 'Company Mentor',
-              value: widget.company.companyMentor,
+              label: 'Phone',
+              value: widget.company.phone,
             ),
             _CompactInfoRow(
               label: 'Assigned Students',
@@ -546,9 +547,11 @@ class CompanyRecord {
     required this.name,
     required this.website,
     required this.contactEmail,
+    required this.phone,
     required this.industry,
-    required this.location,
-    required this.companyMentor,
+    required this.experience,
+    required this.about,
+    required this.courses,
     required this.assignedStudents,
     required this.activeInternships,
     required this.status,
@@ -560,14 +563,41 @@ class CompanyRecord {
   final String name;
   final String website;
   final String contactEmail;
+  final String phone;
   final String industry;
-  final String location;
-  final String companyMentor;
+  final String experience;
+  final String about;
+  final List<String> courses;
   final int assignedStudents;
   final int activeInternships;
   final CompanyStatus status;
   final String notes;
   final List<String> studentPreview;
+
+  factory CompanyRecord.fromFirestore(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final Map<String, dynamic> data = doc.data();
+
+    return CompanyRecord(
+      id: doc.id,
+      name: _readString(data['name'], 'Unnamed Company'),
+      website: _readString(data['website'], 'Not Available'),
+      contactEmail: _readString(data['email'] ?? data['contactEmail'], 'Not Available'),
+      phone: _readString(data['phone'], 'Not Available'),
+      industry: _readString(data['industry'], 'Unspecified'),
+      experience: _readString(data['experience'], 'Not Available'),
+      about: _readString(data['about'], 'No description added yet.'),
+      courses: _readStringList(data['courses']),
+      assignedStudents: _readInt(data['internCount'] ?? data['assignedStudents']),
+      activeInternships: _readInt(
+        data['activeInternships'] ?? data['internCount'] ?? data['assignedStudents'],
+      ),
+      status: CompanyStatus.fromFirestore(data['status']),
+      notes: _readString(data['notes'] ?? data['about'], 'No notes added yet.'),
+      studentPreview: _readStringList(data['studentPreview']),
+    );
+  }
 
   String get initials {
     final List<String> parts = name.trim().split(' ');
@@ -578,7 +608,7 @@ class CompanyRecord {
         .toUpperCase();
   }
 
-  String get contactInfo => '$contactEmail | $website';
+  String get contactInfo => '$contactEmail | $phone';
 
   CompanyRecord copyWith({CompanyStatus? status}) {
     return CompanyRecord(
@@ -586,15 +616,48 @@ class CompanyRecord {
       name: name,
       website: website,
       contactEmail: contactEmail,
+      phone: phone,
       industry: industry,
-      location: location,
-      companyMentor: companyMentor,
+      experience: experience,
+      about: about,
+      courses: courses,
       assignedStudents: assignedStudents,
       activeInternships: activeInternships,
       status: status ?? this.status,
       notes: notes,
       studentPreview: studentPreview,
     );
+  }
+
+  static String _readString(dynamic value, [String fallback = '']) {
+    if (value == null) {
+      return fallback;
+    }
+    final String normalized = value.toString().trim();
+    return normalized.isEmpty ? fallback : normalized;
+  }
+
+  static int _readInt(dynamic value, {int fallback = 0}) {
+    if (value is int) {
+      return value;
+    }
+    if (value is double) {
+      return value.round();
+    }
+    if (value is String) {
+      return int.tryParse(value.trim()) ?? fallback;
+    }
+    return fallback;
+  }
+
+  static List<String> _readStringList(dynamic value) {
+    if (value is List) {
+      return value
+          .map((item) => item.toString().trim())
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false);
+    }
+    return const <String>[];
   }
 }
 
@@ -629,4 +692,18 @@ enum CompanyStatus {
   final String label;
   final Color color;
   final Color backgroundColor;
+
+  factory CompanyStatus.fromFirestore(dynamic value) {
+    final String normalized = (value ?? '').toString().trim().toLowerCase();
+    switch (normalized) {
+      case 'active':
+        return CompanyStatus.active;
+      case 'verified':
+        return CompanyStatus.verified;
+      case 'inactive':
+        return CompanyStatus.inactive;
+      default:
+        return CompanyStatus.pending;
+    }
+  }
 }

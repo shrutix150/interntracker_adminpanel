@@ -135,7 +135,7 @@ class _SearchField extends StatelessWidget {
         ),
         decoration: InputDecoration(
           border: InputBorder.none,
-          hintText: 'Search students, approvals, companies, or reports',
+          hintText: 'Search students, approvals, mentors, or companies',
           hintStyle: AppTextStyles.body.copyWith(color: AppColors.textMuted),
           prefixIcon: Container(
             margin: EdgeInsets.all(compact ? 8 : 10),

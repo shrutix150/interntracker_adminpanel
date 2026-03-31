@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-import 'admin_dashboard/main/admin_dashboard_shell.dart';
+import 'auth/admin_auth_gate.dart';
 import 'core/theme/app_theme.dart';
+import 'firebase_options.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const InternTrackerAdminApp());
 }
 
@@ -17,7 +22,7 @@ class InternTrackerAdminApp extends StatelessWidget {
       title: 'InternTracker Admin',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const AdminDashboardShell(),
+      home: const AdminAuthGate(),
     );
   }
 }

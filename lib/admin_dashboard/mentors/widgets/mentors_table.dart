@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
@@ -77,9 +78,7 @@ class MentorsTable extends StatelessWidget {
                     SizedBox(width: 16),
                     _HeaderCell(label: 'Department / Company', flex: 3),
                     SizedBox(width: 16),
-                    _HeaderCell(label: 'Assigned Students', flex: 2),
-                    SizedBox(width: 16),
-                    _HeaderCell(label: 'Active Internships', flex: 2),
+                    _HeaderCell(label: 'Phone', flex: 2),
                     SizedBox(width: 16),
                     _HeaderCell(label: 'Status', flex: 2),
                     SizedBox(width: 16),
@@ -182,15 +181,7 @@ class _MentorRowState extends State<_MentorRow> {
             const SizedBox(width: 16),
             Expanded(flex: 3, child: _BodyText(widget.mentor.primaryGroup)),
             const SizedBox(width: 16),
-            Expanded(
-              flex: 2,
-              child: _BodyText('${widget.mentor.assignedStudents}'),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              flex: 2,
-              child: _BodyText('${widget.mentor.activeInternships}'),
-            ),
+            Expanded(flex: 2, child: _BodyText(widget.mentor.phoneNumber)),
             const SizedBox(width: 16),
             Expanded(
               flex: 2,
@@ -271,14 +262,7 @@ class _MentorCardState extends State<_MentorCard> {
               label: 'Department / Company',
               value: widget.mentor.primaryGroup,
             ),
-            _CompactInfoRow(
-              label: 'Assigned Students',
-              value: '${widget.mentor.assignedStudents}',
-            ),
-            _CompactInfoRow(
-              label: 'Active Internships',
-              value: '${widget.mentor.activeInternships}',
-            ),
+            _CompactInfoRow(label: 'Phone', value: widget.mentor.phoneNumber),
             const SizedBox(height: 16),
             _ActionGroup(
               mentor: widget.mentor,
@@ -555,12 +539,10 @@ class MentorRecord {
     required this.department,
     required this.company,
     required this.phoneNumber,
+    required this.employeeId,
     required this.designation,
-    required this.assignedStudents,
-    required this.activeInternships,
     required this.status,
-    required this.notes,
-    required this.studentPreview,
+    required this.createdAt,
   });
 
   final String id;
@@ -570,12 +552,10 @@ class MentorRecord {
   final String? department;
   final String? company;
   final String phoneNumber;
+  final String employeeId;
   final String designation;
-  final int assignedStudents;
-  final int activeInternships;
   final MentorStatus status;
-  final String notes;
-  final List<String> studentPreview;
+  final DateTime? createdAt;
 
   String get initials {
     final List<String> parts = name.trim().split(' ');
@@ -589,6 +569,111 @@ class MentorRecord {
   String get primaryGroup => type == MentorType.faculty
       ? (department ?? 'Unassigned Department')
       : (company ?? 'Unassigned Company');
+
+  String get joinedOnLabel {
+    if (createdAt == null) {
+      return 'Not available';
+    }
+
+    const List<String> months = <String>[
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+
+    return '${createdAt!.day.toString().padLeft(2, '0')} '
+        '${months[createdAt!.month - 1]} ${createdAt!.year}';
+  }
+
+  factory MentorRecord.fromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final Map<String, dynamic> data = doc.data() ?? <String, dynamic>{};
+    final String role = _readString(data['role'], fallback: 'mentor')
+        .toLowerCase();
+
+    return MentorRecord(
+      id: doc.id,
+      name: _readString(
+        data['name'] ?? data['fullName'] ?? data['displayName'],
+        fallback: 'Unknown Mentor',
+      ),
+      email: _readString(data['email'], fallback: 'No email'),
+      type: MentorType.fromFirestore(role),
+      department: _readNullableString(<dynamic>[
+        data['department'],
+        data['branch'],
+        data['facultyDepartment'],
+      ]),
+      company: _readNullableString(<dynamic>[
+        data['companyName'],
+        data['company'],
+        data['organization'],
+      ]),
+      phoneNumber: _readString(
+        data['phoneNumber'] ?? data['phone'] ?? data['mobileNumber'],
+        fallback: 'Not provided',
+      ),
+      employeeId: _readString(
+        data['employeeId'] ?? data['staffId'] ?? data['facultyId'],
+        fallback: 'Not provided',
+      ),
+      designation: _readString(
+        data['designation'] ?? data['jobTitle'] ?? data['position'],
+        fallback: 'Not provided',
+      ),
+      status: MentorStatus.fromFirestore(
+        status: data['status'],
+        isApproved: data['isApproved'],
+      ),
+      createdAt: _readDateTime(
+        data['createdAt'] ?? data['updatedAt'] ?? data['requestDate'],
+      ),
+    );
+  }
+
+  static String _readString(dynamic value, {required String fallback}) {
+    if (value == null) {
+      return fallback;
+    }
+
+    final String normalized = value.toString().trim();
+    return normalized.isEmpty ? fallback : normalized;
+  }
+
+  static String? _readNullableString(List<dynamic> values) {
+    for (final dynamic value in values) {
+      if (value == null) {
+        continue;
+      }
+
+      final String normalized = value.toString().trim();
+      if (normalized.isNotEmpty) {
+        return normalized;
+      }
+    }
+
+    return null;
+  }
+
+  static DateTime? _readDateTime(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    return null;
+  }
 }
 
 enum MentorType {
@@ -599,6 +684,15 @@ enum MentorType {
 
   final String label;
   final Color color;
+
+  factory MentorType.fromFirestore(String value) {
+    switch (value.trim().toLowerCase()) {
+      case 'faculty':
+        return MentorType.faculty;
+      default:
+        return MentorType.company;
+    }
+  }
 }
 
 enum MentorStatus {
@@ -607,9 +701,9 @@ enum MentorStatus {
     color: AppColors.aquamarine,
     backgroundColor: AppColors.secondarySoft,
   ),
-  busy(
-    label: 'Busy',
-    color: AppColors.tangerineDream,
+  pending(
+    label: 'Pending',
+    color: AppColors.jasmine,
     backgroundColor: AppColors.peachSoft,
   ),
   inactive(
@@ -627,4 +721,25 @@ enum MentorStatus {
   final String label;
   final Color color;
   final Color backgroundColor;
+
+  factory MentorStatus.fromFirestore({
+    required dynamic status,
+    required dynamic isApproved,
+  }) {
+    final String normalized = (status ?? '').toString().trim().toLowerCase();
+    final bool approved = isApproved == true;
+
+    if (normalized == 'rejected' ||
+        normalized == 'inactive' ||
+        normalized == 'disabled') {
+      return MentorStatus.inactive;
+    }
+    if (normalized == 'pending' ||
+        normalized == 'requested' ||
+        normalized == 'waiting' ||
+        (!approved && normalized != 'approved')) {
+      return MentorStatus.pending;
+    }
+    return MentorStatus.active;
+  }
 }

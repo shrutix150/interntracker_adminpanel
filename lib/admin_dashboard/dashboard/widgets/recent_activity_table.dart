@@ -4,7 +4,12 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 
 class RecentActivityTable extends StatelessWidget {
-  const RecentActivityTable({super.key});
+  const RecentActivityTable({
+    super.key,
+    required this.activities,
+  });
+
+  final List<ActivityItem> activities;
 
   @override
   Widget build(BuildContext context) {
@@ -32,9 +37,12 @@ class RecentActivityTable extends StatelessWidget {
             children: <Widget>[
               const _RecentActivityHeader(),
               const SizedBox(height: 22),
+              if (activities.isEmpty)
+                const _EmptyActivityState()
+              else
               if (compact)
                 Column(
-                  children: _activities
+                  children: activities
                       .map(
                         (activity) => Padding(
                           padding: const EdgeInsets.only(bottom: 14),
@@ -44,7 +52,7 @@ class RecentActivityTable extends StatelessWidget {
                       .toList(growable: false),
                 )
               else
-                const _DesktopActivityTable(),
+                _DesktopActivityTable(activities: activities),
             ],
           );
         },
@@ -91,7 +99,9 @@ class _RecentActivityHeader extends StatelessWidget {
 }
 
 class _DesktopActivityTable extends StatelessWidget {
-  const _DesktopActivityTable();
+  const _DesktopActivityTable({required this.activities});
+
+  final List<ActivityItem> activities;
 
   @override
   Widget build(BuildContext context) {
@@ -115,13 +125,37 @@ class _DesktopActivityTable extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        ..._activities.map(
+        ...activities.map(
           (activity) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: _ActivityTableRow(activity: activity),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _EmptyActivityState extends StatelessWidget {
+  const _EmptyActivityState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Text(
+        'No recent activity found in Firebase yet.',
+        style: AppTextStyles.body.copyWith(
+          color: AppColors.textPrimary,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
     );
   }
 }
@@ -469,50 +503,3 @@ enum ActivityStatus {
   final Color backgroundColor;
 }
 
-const List<ActivityItem> _activities = <ActivityItem>[
-  ActivityItem(
-    entity: 'Aditi Sharma',
-    action: 'Submitted weekly report',
-    role: 'Student',
-    time: '10 mins ago',
-    status: ActivityStatus.pending,
-    initials: 'AS',
-    accentColor: AppColors.coolSky,
-  ),
-  ActivityItem(
-    entity: 'Rahul Verma',
-    action: 'Approved internship request',
-    role: 'Faculty Mentor',
-    time: '25 mins ago',
-    status: ActivityStatus.approved,
-    initials: 'RV',
-    accentColor: AppColors.aquamarine,
-  ),
-  ActivityItem(
-    entity: 'TCS Pune',
-    action: 'Company profile updated',
-    role: 'Company',
-    time: '1 hour ago',
-    status: ActivityStatus.updated,
-    initials: 'TC',
-    accentColor: AppColors.tangerineDream,
-  ),
-  ActivityItem(
-    entity: 'Meera Joshi',
-    action: 'Requested mentor reassignment',
-    role: 'Student',
-    time: '2 hours ago',
-    status: ActivityStatus.review,
-    initials: 'MJ',
-    accentColor: AppColors.jasmine,
-  ),
-  ActivityItem(
-    entity: 'HOD IT Dept',
-    action: 'Published internship notice',
-    role: 'HOD',
-    time: 'Today',
-    status: ActivityStatus.sent,
-    initials: 'HD',
-    accentColor: AppColors.strawberryRed,
-  ),
-];

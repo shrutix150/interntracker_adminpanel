@@ -101,43 +101,61 @@ class _RoleTile extends StatelessWidget {
 
 enum NotificationAudienceRole {
   allRoles(
+    storageKey: 'all_roles',
     label: 'All roles',
     icon: Icons.hub_rounded,
     color: AppColors.coolSky,
   ),
   students(
+    storageKey: 'students',
     label: 'Students',
     icon: Icons.school_rounded,
     color: AppColors.aquamarine,
   ),
   facultyMentors(
+    storageKey: 'faculty_mentors',
     label: 'Faculty Mentors',
     icon: Icons.person_outline_rounded,
     color: AppColors.jasmine,
   ),
   companyMentors(
+    storageKey: 'company_mentors',
     label: 'Company Mentors',
     icon: Icons.business_center_rounded,
     color: AppColors.tangerineDream,
   ),
   hods(
+    storageKey: 'hods',
     label: 'HODs',
     icon: Icons.account_balance_rounded,
     color: AppColors.coolSky,
   ),
   principal(
+    storageKey: 'principal',
     label: 'Principal',
     icon: Icons.workspace_premium_rounded,
     color: AppColors.strawberryRed,
   );
 
   const NotificationAudienceRole({
+    required this.storageKey,
     required this.label,
     required this.icon,
     required this.color,
   });
 
+  final String storageKey;
   final String label;
   final IconData icon;
   final Color color;
+
+  factory NotificationAudienceRole.fromStorage(String value) {
+    final String normalized = value.trim().toLowerCase();
+    for (final NotificationAudienceRole role in NotificationAudienceRole.values) {
+      if (role.storageKey == normalized) {
+        return role;
+      }
+    }
+    return NotificationAudienceRole.allRoles;
+  }
 }

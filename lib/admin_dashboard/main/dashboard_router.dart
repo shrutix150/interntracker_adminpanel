@@ -5,7 +5,6 @@ import '../approvals/screens/approvals_screen.dart';
 import '../companies/screens/companies_screen.dart';
 import '../mentors/screens/mentors_screen.dart';
 import '../notifications/screens/notifications_screen.dart';
-import '../reports/screens/reports_screen.dart';
 import '../students/screens/students_screen.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/theme/text_styles.dart';
@@ -25,8 +24,6 @@ class DashboardRouter extends StatelessWidget {
         return const ApprovalsScreen();
       case AdminNavigationItem.students:
         return const StudentsScreen();
-      case AdminNavigationItem.reports:
-        return const ReportsScreen();
       case AdminNavigationItem.mentors:
         return const MentorsScreen();
       case AdminNavigationItem.companies:

@@ -56,7 +56,7 @@ class _KpiCardState extends State<KpiCard> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             curve: Curves.easeOutCubic,
-            padding: const EdgeInsets.all(22),
+            padding: const EdgeInsets.all(0),
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(26),
@@ -73,74 +73,93 @@ class _KpiCardState extends State<KpiCard> {
                 ),
               ],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        color: widget.accentColor.withOpacity(0.16),
-                      ),
-                      child: Icon(
-                        widget.icon,
-                        color: AppColors.textPrimary,
-                        size: 24,
-                      ),
+                Container(
+                  width: 6,
+                  height: double.infinity,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: const BorderRadius.horizontal(
+                      left: Radius.circular(26),
                     ),
-                    const Spacer(),
-                    if (widget.trendLabel != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 7,
-                        ),
-                        decoration: BoxDecoration(
-                          color: widget.trendUp
-                              ? AppColors.secondarySoft
-                              : AppColors.dangerSoft,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            Icon(
-                              widget.trendUp
-                                  ? Icons.north_east_rounded
-                                  : Icons.south_east_rounded,
-                              size: 14,
-                              color: AppColors.textPrimary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              widget.trendLabel!,
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  widget.value,
-                  style: AppTextStyles.display.copyWith(
-                    fontSize: 30,
-                    color: AppColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  widget.title,
-                  style: AppTextStyles.body.copyWith(
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w500,
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(22),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            Container(
+                              width: 52,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(18),
+                                color: widget.accentColor.withOpacity(0.16),
+                              ),
+                              child: Icon(
+                                widget.icon,
+                                color: AppColors.textPrimary,
+                                size: 24,
+                              ),
+                            ),
+                            const Spacer(),
+                            if (widget.trendLabel != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 7,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: widget.trendUp
+                                      ? AppColors.secondarySoft
+                                      : AppColors.dangerSoft,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    Icon(
+                                      widget.trendUp
+                                          ? Icons.north_east_rounded
+                                          : Icons.south_east_rounded,
+                                      size: 14,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      widget.trendLabel!,
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.textPrimary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          widget.value,
+                          style: AppTextStyles.display.copyWith(
+                            fontSize: 30,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.title,
+                          style: AppTextStyles.body.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
-import 'approvals_table.dart';
+import '../../../models/approval_model.dart';
 
 class ApprovalFilterBar extends StatelessWidget {
   const ApprovalFilterBar({

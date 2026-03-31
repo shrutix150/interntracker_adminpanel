@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
+import '../../../models/approval_model.dart';
+
+typedef ApprovalAction = Future<void> Function(ApprovalRequest request);
 
 class ApprovalsTable extends StatelessWidget {
   const ApprovalsTable({
@@ -9,13 +12,15 @@ class ApprovalsTable extends StatelessWidget {
     required this.requests,
     required this.onView,
     required this.onApprove,
-    required this.onReject,
+    this.onReject,
+    this.busyRequestId,
   });
 
   final List<ApprovalRequest> requests;
   final ValueChanged<ApprovalRequest> onView;
-  final ValueChanged<ApprovalRequest> onApprove;
-  final ValueChanged<ApprovalRequest> onReject;
+  final ApprovalAction onApprove;
+  final ApprovalAction? onReject;
+  final String? busyRequestId;
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +41,10 @@ class ApprovalsTable extends StatelessWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
+          if (requests.isEmpty) {
+            return const _EmptyApprovalState();
+          }
+
           final bool compact = constraints.maxWidth < 980;
 
           if (compact) {
@@ -49,6 +58,7 @@ class ApprovalsTable extends StatelessWidget {
                         onView: onView,
                         onApprove: onApprove,
                         onReject: onReject,
+                        busyRequestId: busyRequestId,
                       ),
                     ),
                   )
@@ -95,6 +105,7 @@ class ApprovalsTable extends StatelessWidget {
                     onView: onView,
                     onApprove: onApprove,
                     onReject: onReject,
+                    busyRequestId: busyRequestId,
                   ),
                 ),
               ),
@@ -132,12 +143,14 @@ class _ApprovalRequestRow extends StatefulWidget {
     required this.onView,
     required this.onApprove,
     required this.onReject,
+    required this.busyRequestId,
   });
 
   final ApprovalRequest request;
   final ValueChanged<ApprovalRequest> onView;
-  final ValueChanged<ApprovalRequest> onApprove;
-  final ValueChanged<ApprovalRequest> onReject;
+  final ApprovalAction onApprove;
+  final ApprovalAction? onReject;
+  final String? busyRequestId;
 
   @override
   State<_ApprovalRequestRow> createState() => _ApprovalRequestRowState();
@@ -201,7 +214,7 @@ class _ApprovalRequestRowState extends State<_ApprovalRequestRow> {
             Expanded(
               flex: 2,
               child: _DataText(
-                widget.request.requestDate,
+                widget.request.requestDateLabel,
                 color: AppColors.textSecondary,
               ),
             ),
@@ -221,6 +234,7 @@ class _ApprovalRequestRowState extends State<_ApprovalRequestRow> {
                 onView: widget.onView,
                 onApprove: widget.onApprove,
                 onReject: widget.onReject,
+                busyRequestId: widget.busyRequestId,
               ),
             ),
           ],
@@ -236,12 +250,14 @@ class _ApprovalRequestCard extends StatefulWidget {
     required this.onView,
     required this.onApprove,
     required this.onReject,
+    required this.busyRequestId,
   });
 
   final ApprovalRequest request;
   final ValueChanged<ApprovalRequest> onView;
-  final ValueChanged<ApprovalRequest> onApprove;
-  final ValueChanged<ApprovalRequest> onReject;
+  final ApprovalAction onApprove;
+  final ApprovalAction? onReject;
+  final String? busyRequestId;
 
   @override
   State<_ApprovalRequestCard> createState() => _ApprovalRequestCardState();
@@ -291,7 +307,7 @@ class _ApprovalRequestCardState extends State<_ApprovalRequestCard> {
             ),
             _CompactInfoRow(
               label: 'Request Date',
-              value: widget.request.requestDate,
+              value: widget.request.requestDateLabel,
             ),
             const SizedBox(height: 14),
             _RowActions(
@@ -299,6 +315,7 @@ class _ApprovalRequestCardState extends State<_ApprovalRequestCard> {
               onView: widget.onView,
               onApprove: widget.onApprove,
               onReject: widget.onReject,
+              busyRequestId: widget.busyRequestId,
               compact: true,
             ),
           ],
@@ -428,18 +445,23 @@ class _RowActions extends StatelessWidget {
     required this.onView,
     required this.onApprove,
     required this.onReject,
+    required this.busyRequestId,
     this.compact = false,
   });
 
   final ApprovalRequest request;
   final ValueChanged<ApprovalRequest> onView;
-  final ValueChanged<ApprovalRequest> onApprove;
-  final ValueChanged<ApprovalRequest> onReject;
+  final ApprovalAction onApprove;
+  final ApprovalAction? onReject;
+  final String? busyRequestId;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final bool compactWidth = MediaQuery.sizeOf(context).width < 1220;
+    final bool isBusy = busyRequestId == request.id;
+    final bool canApprove =
+        request.status == ApprovalStatus.pending && !isBusy;
 
     final List<Widget> actions = <Widget>[
       _ActionButton(
@@ -450,20 +472,25 @@ class _RowActions extends StatelessWidget {
         compact: compactWidth,
       ),
       _ActionButton(
-        label: 'Approve',
-        icon: Icons.check_circle_rounded,
+        label: isBusy ? 'Approving...' : 'Approve',
+        icon: isBusy ? Icons.sync_rounded : Icons.check_circle_rounded,
         color: AppColors.aquamarine,
-        onTap: () => onApprove(request),
-        compact: compactWidth,
-      ),
-      _ActionButton(
-        label: 'Reject',
-        icon: Icons.cancel_rounded,
-        color: AppColors.strawberryRed,
-        onTap: () => onReject(request),
+        onTap: canApprove ? () => onApprove(request) : null,
         compact: compactWidth,
       ),
     ];
+
+    if (onReject != null) {
+      actions.add(
+        _ActionButton(
+          label: 'Reject',
+          icon: Icons.cancel_rounded,
+          color: AppColors.strawberryRed,
+          onTap: isBusy ? null : () => onReject!(request),
+          compact: compactWidth,
+        ),
+      );
+    }
 
     return Wrap(spacing: 8, runSpacing: 8, children: actions);
   }
@@ -481,11 +508,13 @@ class _ActionButton extends StatelessWidget {
   final String label;
   final IconData icon;
   final Color color;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final bool isDisabled = onTap == null;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -497,19 +526,33 @@ class _ActionButton extends StatelessWidget {
             vertical: compact ? 8 : 9,
           ),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.12),
+            color: isDisabled
+                ? AppColors.border.withOpacity(0.4)
+                : color.withOpacity(0.12),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: color.withOpacity(0.16)),
+            border: Border.all(
+              color: isDisabled
+                  ? AppColors.border
+                  : color.withOpacity(0.16),
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Icon(icon, size: compact ? 15 : 16, color: AppColors.textPrimary),
+              Icon(
+                icon,
+                size: compact ? 15 : 16,
+                color: isDisabled
+                    ? AppColors.textMuted
+                    : AppColors.textPrimary,
+              ),
               SizedBox(width: compact ? 6 : 8),
               Text(
                 label,
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textPrimary,
+                  color: isDisabled
+                      ? AppColors.textMuted
+                      : AppColors.textPrimary,
                   fontWeight: FontWeight.w700,
                   fontSize: compact ? 11.5 : 12,
                 ),
@@ -561,99 +604,51 @@ class _ApprovalStatusChip extends StatelessWidget {
   }
 }
 
-class ApprovalRequest {
-  const ApprovalRequest({
-    required this.id,
-    required this.name,
-    required this.email,
-    required this.role,
-    required this.department,
-    required this.requestType,
-    required this.requestDate,
-    required this.status,
-    required this.notes,
-    required this.profileSummary,
-    this.assignedFaculty,
-    this.assignedCompany,
-  });
+class _EmptyApprovalState extends StatelessWidget {
+  const _EmptyApprovalState();
 
-  final String id;
-  final String name;
-  final String email;
-  final ApprovalRole role;
-  final String department;
-  final String requestType;
-  final String requestDate;
-  final ApprovalStatus status;
-  final String notes;
-  final String profileSummary;
-  final String? assignedFaculty;
-  final String? assignedCompany;
-
-  String get initials {
-    final List<String> parts = name.split(' ');
-    if (parts.length == 1) {
-      return parts.first.substring(0, 1).toUpperCase();
-    }
-    return '${parts.first.substring(0, 1)}${parts.last.substring(0, 1)}'
-        .toUpperCase();
-  }
-
-  ApprovalRequest copyWith({ApprovalStatus? status}) {
-    return ApprovalRequest(
-      id: id,
-      name: name,
-      email: email,
-      role: role,
-      department: department,
-      requestType: requestType,
-      requestDate: requestDate,
-      status: status ?? this.status,
-      notes: notes,
-      profileSummary: profileSummary,
-      assignedFaculty: assignedFaculty,
-      assignedCompany: assignedCompany,
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 24,
+            offset: Offset(0, 16),
+          ),
+        ],
+      ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 6,
+            height: 72,
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+          const SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text('No pending approvals', style: AppTextStyles.sectionTitle),
+                const SizedBox(height: 6),
+                Text(
+                  'Everyone is up to date right now. New requests will appear here automatically.',
+                  style: AppTextStyles.body,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
-}
-
-enum ApprovalRole {
-  student(label: 'Student', color: AppColors.coolSky),
-  facultyMentor(label: 'Faculty Mentor', color: AppColors.aquamarine),
-  companyMentor(label: 'Company Mentor', color: AppColors.tangerineDream),
-  hod(label: 'HOD', color: AppColors.jasmine),
-  principal(label: 'Principal', color: AppColors.strawberryRed);
-
-  const ApprovalRole({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-}
-
-enum ApprovalStatus {
-  pending(
-    label: 'Pending',
-    color: AppColors.tangerineDream,
-    backgroundColor: AppColors.peachSoft,
-  ),
-  approved(
-    label: 'Approved',
-    color: AppColors.aquamarine,
-    backgroundColor: AppColors.secondarySoft,
-  ),
-  rejected(
-    label: 'Rejected',
-    color: AppColors.strawberryRed,
-    backgroundColor: AppColors.dangerSoft,
-  );
-
-  const ApprovalStatus({
-    required this.label,
-    required this.color,
-    required this.backgroundColor,
-  });
-
-  final String label;
-  final Color color;
-  final Color backgroundColor;
 }

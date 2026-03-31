@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
@@ -639,6 +640,145 @@ class StudentRecord {
   final int missedLogs;
   final String? notes;
 
+  StudentRecord copyWith({
+    String? id,
+    String? name,
+    String? email,
+    String? rollNumber,
+    String? department,
+    StudentYear? year,
+    String? company,
+    String? internshipRole,
+    String? duration,
+    String? startDate,
+    String? endDate,
+    String? facultyMentor,
+    String? companyMentor,
+    StudentInternshipStatus? status,
+    int? attendance,
+    int? progress,
+    int? weeklyCheckIns,
+    int? missedLogs,
+    String? notes,
+  }) {
+    return StudentRecord(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      rollNumber: rollNumber ?? this.rollNumber,
+      department: department ?? this.department,
+      year: year ?? this.year,
+      company: company ?? this.company,
+      internshipRole: internshipRole ?? this.internshipRole,
+      duration: duration ?? this.duration,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      facultyMentor: facultyMentor ?? this.facultyMentor,
+      companyMentor: companyMentor ?? this.companyMentor,
+      status: status ?? this.status,
+      attendance: attendance ?? this.attendance,
+      progress: progress ?? this.progress,
+      weeklyCheckIns: weeklyCheckIns ?? this.weeklyCheckIns,
+      missedLogs: missedLogs ?? this.missedLogs,
+      notes: notes ?? this.notes,
+    );
+  }
+
+  factory StudentRecord.fromFirestore(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final Map<String, dynamic> data = doc.data();
+
+    return StudentRecord(
+      id: doc.id,
+      name: _readString(data['name'] ?? data['fullName'], 'Unnamed Student'),
+      email: _readString(data['email']),
+      rollNumber: _readRollNumber(data, doc.id),
+      department: _readString(data['department'], 'Unassigned'),
+      year: StudentYear.fromFirestore(data['year']),
+      company: _readString(data['companyName'] ?? data['company'], 'Not Assigned'),
+      internshipRole: _readString(
+        data['internshipRole'] ?? data['roleTitle'],
+        'Intern',
+      ),
+      duration: _readString(data['duration'], 'Not specified'),
+      startDate: _formatDate(data['startDate']),
+      endDate: _formatDate(data['endDate']),
+      facultyMentor: _readPersonLike(
+        <dynamic>[
+          data['assignedFaculty'],
+          data['assignedFacultyName'],
+          data['facultyMentor'],
+          data['facultyMentorName'],
+          data['facultyName'],
+          data['mentorFaculty'],
+        ],
+        'Not Assigned',
+      ),
+      companyMentor: _readPersonLike(
+        <dynamic>[
+          data['assignedMentor'],
+          data['assignedMentorName'],
+          data['companyMentor'],
+          data['companyMentorName'],
+          data['mentor'],
+          data['mentorName'],
+          data['guideName'],
+          data['industryMentor'],
+        ],
+        'Not Assigned',
+      ),
+      status: StudentInternshipStatus.fromFirestore(
+        data['internshipStatus'] ?? data['status'],
+      ),
+      attendance: _readFirstInt(
+        <dynamic>[
+          data['attendance'],
+          data['attendancePercentage'],
+          data['attendancePercent'],
+          data['overallAttendance'],
+          data['attendanceRate'],
+          data['attendance_rate'],
+          data['stats'] is Map ? data['stats']['attendance'] : null,
+        ],
+        fallback: 0,
+      ),
+      progress: _readFirstInt(
+        <dynamic>[
+          data['progress'],
+          data['progressPercentage'],
+          data['progressPercent'],
+          data['completion'],
+          data['completionPercentage'],
+          data['stats'] is Map ? data['stats']['progress'] : null,
+        ],
+        fallback: 0,
+      ),
+      weeklyCheckIns: _readFirstInt(
+        <dynamic>[
+          data['weeklyCheckIns'],
+          data['weeklyCheckIn'],
+          data['weeklyCheckin'],
+          data['checkIns'],
+          data['checkInCount'],
+          data['stats'] is Map ? data['stats']['weeklyCheckIns'] : null,
+        ],
+        fallback: 0,
+      ),
+      missedLogs: _readFirstInt(
+        <dynamic>[
+          data['missedLogs'],
+          data['missedLogCount'],
+          data['missedCheckIns'],
+          data['pendingLogs'],
+          data['stats'] is Map ? data['stats']['missedLogs'] : null,
+        ],
+        fallback: 0,
+      ),
+      notes: _readNullableString(data['notes'] ?? data['remarks']),
+    );
+  }
+
   String get initials {
     final List<String> parts = name.trim().split(' ');
     if (parts.length == 1) {
@@ -646,6 +786,135 @@ class StudentRecord {
     }
     return '${parts.first.substring(0, 1)}${parts.last.substring(0, 1)}'
         .toUpperCase();
+  }
+
+  static String _readString(dynamic value, [String fallback = '']) {
+    if (value == null) {
+      return fallback;
+    }
+    final String normalized = value.toString().trim();
+    return normalized.isEmpty ? fallback : normalized;
+  }
+
+  static String _readRollNumber(Map<String, dynamic> data, String docId) {
+    final String explicit = _readString(
+      data['rollNumber'] ??
+          data['rollNo'] ??
+          data['studentId'] ??
+          data['studentCode'] ??
+          data['enrollmentNumber'] ??
+          data['enrollmentNo'] ??
+          data['registrationNumber'] ??
+          data['registrationNo'] ??
+          data['prn'],
+    );
+    if (explicit.isNotEmpty) {
+      return explicit;
+    }
+
+    final String normalizedDocId = docId.trim();
+    if (RegExp(r'^\d{4,}$').hasMatch(normalizedDocId)) {
+      return normalizedDocId;
+    }
+
+    return 'N/A';
+  }
+
+  static String _readPersonLike(List<dynamic> values, [String fallback = '']) {
+    for (final dynamic value in values) {
+      if (value == null) {
+        continue;
+      }
+
+      if (value is Map) {
+        final String fromMap = _readString(
+          value['name'] ??
+              value['fullName'] ??
+              value['displayName'] ??
+              value['mentorName'] ??
+              value['facultyName'] ??
+              value['email'],
+        );
+        if (fromMap.isNotEmpty) {
+          return fromMap;
+        }
+      }
+
+      final String normalized = _readString(value);
+      if (normalized.isNotEmpty) {
+        return normalized;
+      }
+    }
+
+    return fallback;
+  }
+
+  static String? _readNullableString(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    final String normalized = value.toString().trim();
+    return normalized.isEmpty ? null : normalized;
+  }
+
+  static int _readInt(dynamic value, {int fallback = 0}) {
+    if (value is int) {
+      return value;
+    }
+    if (value is double) {
+      return value.round();
+    }
+    if (value is String) {
+      return int.tryParse(value.trim()) ?? fallback;
+    }
+    return fallback;
+  }
+
+  static int _readFirstInt(List<dynamic> values, {int fallback = 0}) {
+    for (final dynamic value in values) {
+      if (value == null) {
+        continue;
+      }
+
+      final int parsed = _readInt(value, fallback: fallback);
+      if (parsed != fallback || value.toString().trim() == '$fallback') {
+        return parsed;
+      }
+    }
+    return fallback;
+  }
+
+  static String _formatDate(dynamic value) {
+    DateTime? date;
+    if (value is Timestamp) {
+      date = value.toDate();
+    } else if (value is DateTime) {
+      date = value;
+    } else if (value is String) {
+      date = DateTime.tryParse(value);
+    }
+
+    if (date == null) {
+      return 'Not set';
+    }
+
+    const List<String> months = <String>[
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+
+    return '${date.day.toString().padLeft(2, '0')} '
+        '${months[date.month - 1]} ${date.year}';
   }
 }
 
@@ -658,6 +927,33 @@ enum StudentYear {
   const StudentYear(this.label);
 
   final String label;
+
+  factory StudentYear.fromFirestore(dynamic value) {
+    final String normalized = (value ?? '').toString().toLowerCase().trim();
+    switch (normalized) {
+      case '1':
+      case '1st year':
+      case 'first':
+      case 'firstyear':
+      case 'first year':
+        return StudentYear.firstYear;
+      case '2':
+      case '2nd year':
+      case 'second':
+      case 'secondyear':
+      case 'second year':
+        return StudentYear.secondYear;
+      case '4':
+      case '4th year':
+      case 'fourth':
+      case 'final':
+      case 'fourthyear':
+      case 'fourth year':
+        return StudentYear.fourthYear;
+      default:
+        return StudentYear.thirdYear;
+    }
+  }
 }
 
 enum StudentInternshipStatus {
@@ -691,4 +987,22 @@ enum StudentInternshipStatus {
   final String label;
   final Color color;
   final Color backgroundColor;
+
+  factory StudentInternshipStatus.fromFirestore(dynamic value) {
+    final String normalized = (value ?? '').toString().toLowerCase().trim();
+    switch (normalized) {
+      case 'active':
+      case 'ongoing':
+        return StudentInternshipStatus.active;
+      case 'completed':
+      case 'done':
+        return StudentInternshipStatus.completed;
+      case 'atrisk':
+      case 'at risk':
+      case 'risk':
+        return StudentInternshipStatus.atRisk;
+      default:
+        return StudentInternshipStatus.pending;
+    }
+  }
 }

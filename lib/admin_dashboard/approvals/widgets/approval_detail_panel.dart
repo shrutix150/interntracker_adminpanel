@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
+import '../../../models/approval_model.dart';
 import 'approvals_table.dart';
 
 class ApprovalDetailPanel extends StatelessWidget {
@@ -10,13 +11,15 @@ class ApprovalDetailPanel extends StatelessWidget {
     required this.request,
     required this.onClose,
     required this.onApprove,
-    required this.onReject,
+    this.onReject,
+    this.isBusy = false,
   });
 
   final ApprovalRequest request;
   final VoidCallback onClose;
-  final ValueChanged<ApprovalRequest> onApprove;
-  final ValueChanged<ApprovalRequest> onReject;
+  final ApprovalAction onApprove;
+  final ApprovalAction? onReject;
+  final bool isBusy;
 
   @override
   Widget build(BuildContext context) {
@@ -120,7 +123,7 @@ class ApprovalDetailPanel extends StatelessWidget {
                           ),
                           _InfoTile(
                             label: 'Request Date',
-                            value: request.requestDate,
+                            value: request.requestDateLabel,
                           ),
                           _InfoTile(
                             label: 'Current Status',
@@ -218,7 +221,9 @@ class ApprovalDetailPanel extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => onReject(request),
+                        onPressed: isBusy || onReject == null
+                            ? null
+                            : () => onReject!(request),
                         icon: const Icon(Icons.cancel_rounded),
                         label: const Text('Reject'),
                         style: OutlinedButton.styleFrom(
@@ -232,9 +237,17 @@ class ApprovalDetailPanel extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () => onApprove(request),
-                    icon: const Icon(Icons.check_circle_rounded),
-                    label: const Text('Approve Request'),
+                    onPressed: isBusy ? null : () => onApprove(request),
+                    icon: isBusy
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.check_circle_rounded),
+                    label: Text(
+                      isBusy ? 'Approving...' : 'Approve Request',
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.aquamarine,
                       foregroundColor: AppColors.textPrimary,

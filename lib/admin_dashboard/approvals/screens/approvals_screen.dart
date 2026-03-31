@@ -1,7 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
+import '../../../models/approval_model.dart';
 import '../widgets/approval_detail_panel.dart';
 import '../widgets/approval_filter_bar.dart';
 import '../widgets/approvals_table.dart';
@@ -14,169 +16,230 @@ class ApprovalsScreen extends StatefulWidget {
 }
 
 class _ApprovalsScreenState extends State<ApprovalsScreen> {
-  late List<ApprovalRequest> _requests = _seedRequests;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   ApprovalRole? _selectedRole;
   String? _selectedDepartment;
   ApprovalStatus? _selectedStatus;
   String _searchQuery = '';
   ApprovalRequest? _selectedRequest;
+  String? _busyRequestId;
 
-  static const List<String> _departmentOptions = <String>[
-    'Artificial Intelligence & Machine Learning',
-    'Computer Engineering',
-    'Information Technology',
-    'Electronics & Telecommunication',
-    'Electrical Engineering',
-    'Civil Engineering',
-    'Mechanical Engineering',
-    'Automobile Engineering',
-    'Dress Designing & Garment Manufacturing',
-  ];
-
-  List<ApprovalRequest> get _filteredRequests {
-    return _requests
-        .where((request) {
-          final bool roleMatches =
-              _selectedRole == null || request.role == _selectedRole;
-          final bool departmentMatches =
-              _selectedDepartment == null ||
-              request.department == _selectedDepartment;
-          final bool statusMatches =
-              _selectedStatus == null || request.status == _selectedStatus;
-          final String query = _searchQuery.trim().toLowerCase();
-          final bool searchMatches =
-              query.isEmpty ||
-              request.name.toLowerCase().contains(query) ||
-              request.email.toLowerCase().contains(query) ||
-              request.requestType.toLowerCase().contains(query);
-
-          return roleMatches &&
-              departmentMatches &&
-              statusMatches &&
-              searchMatches;
-        })
-        .toList(growable: false);
+  Stream<List<ApprovalRequest>> get _pendingApprovalsStream {
+    return _firestore
+        .collection('user')
+        .where('isApproved', isEqualTo: false)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map(ApprovalRequest.fromFirestore)
+              .toList(growable: false),
+        );
   }
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final bool showSidePanel =
-            _selectedRequest != null && constraints.maxWidth >= 1180;
-        final double contentMaxWidth = showSidePanel ? 920 : 1180;
+    return StreamBuilder<List<ApprovalRequest>>(
+      stream: _pendingApprovalsStream,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const _ApprovalsStateCard(
+            message: 'Unable to load pending approvals right now.',
+            icon: Icons.error_outline_rounded,
+          );
+        }
 
-        return Stack(
-          children: <Widget>[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        if (!snapshot.hasData) {
+          return const _ApprovalsStateCard(
+            message: 'Loading pending approval requests...',
+            icon: Icons.hourglass_top_rounded,
+            showLoader: true,
+          );
+        }
+
+        final List<ApprovalRequest> requests = snapshot.data!;
+        final List<String> departmentOptions = requests
+            .map((request) => request.department)
+            .where((department) => department.trim().isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+        final List<ApprovalRequest> filteredRequests = _applyFilters(requests);
+
+        _syncSelection(filteredRequests);
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final bool showSidePanel =
+                _selectedRequest != null && constraints.maxWidth >= 1180;
+            final double contentMaxWidth = showSidePanel ? 920 : 1180;
+
+            return Stack(
               children: <Widget>[
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: contentMaxWidth),
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            _PageHeader(
-                              pendingCount: _requests
-                                  .where(
-                                    (request) =>
-                                        request.status ==
-                                        ApprovalStatus.pending,
-                                  )
-                                  .length,
-                            ),
-                            const SizedBox(height: 18),
-                            ApprovalFilterBar(
-                              selectedRole: _selectedRole,
-                              selectedDepartment: _selectedDepartment,
-                              selectedStatus: _selectedStatus,
-                              searchQuery: _searchQuery,
-                              departmentOptions: _departmentOptions,
-                              onRoleChanged: (role) {
-                                setState(() => _selectedRole = role);
-                              },
-                              onDepartmentChanged: (department) {
-                                setState(
-                                  () => _selectedDepartment = department,
-                                );
-                              },
-                              onStatusChanged: (status) {
-                                setState(() => _selectedStatus = status);
-                              },
-                              onSearchChanged: (query) {
-                                setState(() => _searchQuery = query);
-                              },
-                              onReset: _resetFilters,
-                            ),
-                            const SizedBox(height: 18),
-                            ApprovalsTable(
-                              requests: _filteredRequests,
-                              onView: _handleView,
-                              onApprove: _handleApprove,
-                              onReject: _handleReject,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                if (showSidePanel) ...<Widget>[
-                  const SizedBox(width: 20),
-                  _PanelEntrance(
-                    child: SizedBox(
-                      width: 380,
-                      child: ApprovalDetailPanel(
-                        request: _selectedRequest!,
-                        onClose: () => setState(() => _selectedRequest = null),
-                        onApprove: _handleApprove,
-                        onReject: _handleReject,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            if (_selectedRequest != null && !showSidePanel)
-              Positioned.fill(
-                child: Container(
-                  color: AppColors.overlay,
-                  child: Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selectedRequest = null),
-                          child: Container(color: Colors.transparent),
-                        ),
-                      ),
-                      _PanelEntrance(
-                        child: SizedBox(
-                          width: constraints.maxWidth.clamp(320.0, 440.0),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: ApprovalDetailPanel(
-                              request: _selectedRequest!,
-                              onClose: () =>
-                                  setState(() => _selectedRequest = null),
-                              onApprove: _handleApprove,
-                              onReject: _handleReject,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: contentMaxWidth),
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                _PageHeader(pendingCount: requests.length),
+                                const SizedBox(height: 18),
+                                ApprovalFilterBar(
+                                  selectedRole: _selectedRole,
+                                  selectedDepartment: _selectedDepartment,
+                                  selectedStatus: _selectedStatus,
+                                  searchQuery: _searchQuery,
+                                  departmentOptions: departmentOptions,
+                                  onRoleChanged: (role) {
+                                    setState(() => _selectedRole = role);
+                                  },
+                                  onDepartmentChanged: (department) {
+                                    setState(
+                                      () => _selectedDepartment = department,
+                                    );
+                                  },
+                                  onStatusChanged: (status) {
+                                    setState(() => _selectedStatus = status);
+                                  },
+                                  onSearchChanged: (query) {
+                                    setState(() => _searchQuery = query);
+                                  },
+                                  onReset: _resetFilters,
+                                ),
+                                const SizedBox(height: 18),
+                                ApprovalsTable(
+                                  requests: filteredRequests,
+                                  busyRequestId: _busyRequestId,
+                                  onView: _handleView,
+                                  onApprove: _handleApprove,
+                                  onReject: _handleReject,
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ),
+                    ),
+                    if (showSidePanel) ...<Widget>[
+                      const SizedBox(width: 20),
+                      _PanelEntrance(
+                        child: SizedBox(
+                          width: 380,
+                          child: ApprovalDetailPanel(
+                            request: _selectedRequest!,
+                            isBusy: _busyRequestId == _selectedRequest!.id,
+                            onClose: () =>
+                                setState(() => _selectedRequest = null),
+                            onApprove: _handleApprove,
+                            onReject: _handleReject,
+                          ),
+                        ),
+                      ),
                     ],
-                  ),
+                  ],
                 ),
-              ),
-          ],
+                if (_selectedRequest != null && !showSidePanel)
+                  Positioned.fill(
+                    child: Container(
+                      color: AppColors.overlay,
+                      child: Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () =>
+                                  setState(() => _selectedRequest = null),
+                              child: Container(color: Colors.transparent),
+                            ),
+                          ),
+                          _PanelEntrance(
+                            child: SizedBox(
+                              width: constraints.maxWidth.clamp(320.0, 440.0),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: ApprovalDetailPanel(
+                                  request: _selectedRequest!,
+                                  isBusy:
+                                      _busyRequestId == _selectedRequest!.id,
+                                  onClose: () => setState(
+                                    () => _selectedRequest = null,
+                                  ),
+                                  onApprove: _handleApprove,
+                                  onReject: _handleReject,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         );
       },
     );
+  }
+
+  List<ApprovalRequest> _applyFilters(List<ApprovalRequest> requests) {
+    return requests.where((request) {
+      final bool roleMatches =
+          _selectedRole == null || request.role == _selectedRole;
+      final bool departmentMatches =
+          _selectedDepartment == null ||
+          request.department == _selectedDepartment;
+      final bool statusMatches =
+          _selectedStatus == null || request.status == _selectedStatus;
+      final String query = _searchQuery.trim().toLowerCase();
+      final bool searchMatches =
+          query.isEmpty ||
+          request.name.toLowerCase().contains(query) ||
+          request.email.toLowerCase().contains(query) ||
+          request.requestType.toLowerCase().contains(query);
+
+      return roleMatches &&
+          departmentMatches &&
+          statusMatches &&
+          searchMatches;
+    }).toList(growable: false);
+  }
+
+  void _syncSelection(List<ApprovalRequest> requests) {
+    if (_selectedRequest == null) {
+      return;
+    }
+
+    ApprovalRequest? refreshedSelection;
+    for (final ApprovalRequest request in requests) {
+      if (request.id == _selectedRequest!.id) {
+        refreshedSelection = request;
+        break;
+      }
+    }
+
+    if (refreshedSelection == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() => _selectedRequest = null);
+        }
+      });
+      return;
+    }
+
+    if (refreshedSelection != _selectedRequest) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() => _selectedRequest = refreshedSelection);
+        }
+      });
+    }
   }
 
   void _handleView(ApprovalRequest request) {
@@ -185,28 +248,60 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     });
   }
 
-  void _handleApprove(ApprovalRequest request) {
-    _updateRequestStatus(request.id, ApprovalStatus.approved);
+  Future<void> _handleApprove(ApprovalRequest request) async {
+    await _updateRequest(
+      request: request,
+      payload: <String, dynamic>{
+        'isApproved': true,
+        'status': 'Approved',
+      },
+      successMessage: '${request.name} approved successfully.',
+    );
   }
 
-  void _handleReject(ApprovalRequest request) {
-    _updateRequestStatus(request.id, ApprovalStatus.rejected);
+  Future<void> _handleReject(ApprovalRequest request) async {
+    await _updateRequest(
+      request: request,
+      payload: <String, dynamic>{
+        'isApproved': false,
+        'status': 'Rejected',
+      },
+      successMessage: '${request.name} marked as rejected.',
+    );
   }
 
-  void _updateRequestStatus(String requestId, ApprovalStatus status) {
-    setState(() {
-      _requests = _requests
-          .map(
-            (request) => request.id == requestId
-                ? request.copyWith(status: status)
-                : request,
-          )
-          .toList(growable: false);
+  Future<void> _updateRequest({
+    required ApprovalRequest request,
+    required Map<String, dynamic> payload,
+    required String successMessage,
+  }) async {
+    setState(() => _busyRequestId = request.id);
 
-      if (_selectedRequest?.id == requestId) {
-        _selectedRequest = _selectedRequest?.copyWith(status: status);
+    try {
+      await _firestore.collection('user').doc(request.id).update(payload);
+
+      if (!mounted) {
+        return;
       }
-    });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(successMessage)),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Something went wrong while updating the request.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _busyRequestId = null);
+      }
+    }
   }
 
   void _resetFilters() {
@@ -239,7 +334,7 @@ class _PageHeader extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: <Color>[
-            AppColors.jasmine.withOpacity(0.24),
+            AppColors.primary.withOpacity(0.18),
             AppColors.coolSky.withOpacity(0.12),
             AppColors.surface,
           ],
@@ -273,7 +368,7 @@ class _PageHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Review and manage pending requests',
+                  'Review and approve pending users from the live Firebase queue.',
                   style: AppTextStyles.body.copyWith(
                     color: AppColors.textPrimary.withOpacity(0.72),
                     height: 1.45,
@@ -341,146 +436,68 @@ class _PanelEntrance extends StatelessWidget {
   }
 }
 
-const List<ApprovalRequest> _seedRequests = <ApprovalRequest>[
-  ApprovalRequest(
-    id: 'apr-001',
-    name: 'Aditi Sharma',
-    email: 'aditi.sharma@interntracker.dev',
-    role: ApprovalRole.student,
-    department: 'Information Technology',
-    requestType: 'Student registration approval',
-    requestDate: '12 Mar 2026',
-    status: ApprovalStatus.pending,
-    notes:
-        'Submitted complete registration documents and requested access to the internship reporting workspace.',
-    profileSummary:
-        'Third-year student with previous internship experience in frontend development and strong academic standing.',
-    assignedFaculty: 'Prof. Nisha Patwardhan',
-    assignedCompany: 'Infosys Pune',
-  ),
-  ApprovalRequest(
-    id: 'apr-002',
-    name: 'Rahul Verma',
-    email: 'rahul.verma@interntracker.dev',
-    role: ApprovalRole.facultyMentor,
-    department: 'Computer Engineering',
-    requestType: 'Mentor account request',
-    requestDate: '11 Mar 2026',
-    status: ApprovalStatus.approved,
-    notes:
-        'Department head recommended approval based on current mentor capacity requirements.',
-    profileSummary:
-        'Faculty mentor focused on placement readiness and internship evaluation for final-year students.',
-    assignedCompany: 'Academic Internship Cell',
-  ),
-  ApprovalRequest(
-    id: 'apr-003',
-    name: 'Priya Nair',
-    email: 'priya.nair@tcsmentor.com',
-    role: ApprovalRole.companyMentor,
-    department: 'Artificial Intelligence & Machine Learning',
-    requestType: 'Company mentor verification',
-    requestDate: '10 Mar 2026',
-    status: ApprovalStatus.pending,
-    notes:
-        'Verification pending final company HR confirmation and updated mentor designation letter.',
-    profileSummary:
-        'Senior software engineer representing TCS Pune, responsible for intern onboarding and progress reviews.',
-    assignedFaculty: 'Prof. Rahul Apte',
-    assignedCompany: 'TCS Pune',
-  ),
-  ApprovalRequest(
-    id: 'apr-004',
-    name: 'Meera Joshi',
-    email: 'meera.joshi@interntracker.dev',
-    role: ApprovalRole.student,
-    department: 'Electronics & Telecommunication',
-    requestType: 'Internship approval request',
-    requestDate: '09 Mar 2026',
-    status: ApprovalStatus.rejected,
-    notes:
-        'Internship documentation was incomplete and the offer letter required a corrected start date.',
-    profileSummary:
-        'Student applicant seeking approval for an embedded systems internship with an external research lab.',
-    assignedFaculty: 'Dr. Sameer Kulkarni',
-    assignedCompany: 'Embedded Research Lab',
-  ),
-  ApprovalRequest(
-    id: 'apr-005',
-    name: 'Karan Malhotra',
-    email: 'karan.malhotra@acmeindustries.com',
-    role: ApprovalRole.companyMentor,
-    department: 'Mechanical Engineering',
-    requestType: 'Company mentor verification',
-    requestDate: '08 Mar 2026',
-    status: ApprovalStatus.pending,
-    notes:
-        'Awaiting review of company affiliation proof and mentor assignment scope before approval.',
-    profileSummary:
-        'Industry mentor for mechanical engineering interns across manufacturing operations and maintenance projects.',
-    assignedFaculty: 'Prof. Shruti Desai',
-    assignedCompany: 'Acme Industries',
-  ),
-  ApprovalRequest(
-    id: 'apr-006',
-    name: 'Dr. Ritu Kulkarni',
-    email: 'ritu.kulkarni@interntracker.dev',
-    role: ApprovalRole.hod,
-    department: 'Electrical Engineering',
-    requestType: 'Department approval authority request',
-    requestDate: '07 Mar 2026',
-    status: ApprovalStatus.pending,
-    notes:
-        'Requested elevated approval privileges for departmental internship review workflows.',
-    profileSummary:
-        'Head of Department overseeing placement coordination, internship approvals, and faculty mentor assignments.',
-    assignedCompany: 'Electrical Department Office',
-  ),
-  ApprovalRequest(
-    id: 'apr-007',
-    name: 'Dr. Anil Deshmukh',
-    email: 'principal@interntracker.dev',
-    role: ApprovalRole.principal,
-    department: 'Civil Engineering',
-    requestType: 'Institutional approval access',
-    requestDate: '06 Mar 2026',
-    status: ApprovalStatus.approved,
-    notes:
-        'Institution-wide approval access requested for executive oversight on internship governance.',
-    profileSummary:
-        'Principal supervising academic operations, institutional compliance, and final approval escalations.',
-    assignedCompany: 'Institution Governance Board',
-  ),
-  ApprovalRequest(
-    id: 'apr-008',
-    name: 'Sneha Patil',
-    email: 'sneha.patil@interntracker.dev',
-    role: ApprovalRole.student,
-    department: 'Automobile Engineering',
-    requestType: 'Student registration approval',
-    requestDate: '05 Mar 2026',
-    status: ApprovalStatus.pending,
-    notes:
-        'Applied for platform onboarding and requested access to mentor-matching and reporting modules.',
-    profileSummary:
-        'Student preparing for automotive systems internship applications with a focus on EV component design.',
-    assignedFaculty: 'Prof. Kedar Sawant',
-    assignedCompany: 'Mahindra Electric',
-  ),
-  ApprovalRequest(
-    id: 'apr-009',
-    name: 'Komal Shinde',
-    email: 'komal.shinde@interntracker.dev',
-    role: ApprovalRole.student,
-    department: 'Dress Designing & Garment Manufacturing',
-    requestType: 'Internship approval request',
-    requestDate: '04 Mar 2026',
-    status: ApprovalStatus.rejected,
-    notes:
-        'Request returned for a corrected company acceptance letter and revised reporting timeline.',
-    profileSummary:
-        'Student applicant pursuing a garment production and merchandising internship with a regional design studio.',
-    assignedFaculty: 'Prof. Neha Bhosale',
-    assignedCompany: 'Studio Weave',
-  ),
-];
+class _ApprovalsStateCard extends StatelessWidget {
+  const _ApprovalsStateCard({
+    required this.message,
+    required this.icon,
+    this.showLoader = false,
+  });
+
+  final String message;
+  final IconData icon;
+  final bool showLoader;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 760),
+        padding: const EdgeInsets.all(28),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: const <BoxShadow>[
+            BoxShadow(
+              color: AppColors.shadow,
+              blurRadius: 24,
+              offset: Offset(0, 16),
+            ),
+          ],
+        ),
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 6,
+              height: 78,
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(width: 18),
+            if (showLoader) ...<Widget>[
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2.4),
+              ),
+              const SizedBox(width: 14),
+            ] else ...<Widget>[
+              Icon(icon, color: AppColors.primary),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: Text(
+                message,
+                style: AppTextStyles.body.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

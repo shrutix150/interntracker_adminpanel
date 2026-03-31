@@ -252,12 +252,31 @@ class _DropdownField<T> extends StatelessWidget {
 }
 
 enum NotificationPriority {
-  normal(label: 'Normal', color: AppColors.coolSky),
-  important(label: 'Important', color: AppColors.tangerineDream),
-  urgent(label: 'Urgent', color: AppColors.strawberryRed);
+  normal(storageKey: 'normal', label: 'Normal', color: AppColors.coolSky),
+  important(
+    storageKey: 'important',
+    label: 'Important',
+    color: AppColors.tangerineDream,
+  ),
+  urgent(storageKey: 'urgent', label: 'Urgent', color: AppColors.strawberryRed);
 
-  const NotificationPriority({required this.label, required this.color});
+  const NotificationPriority({
+    required this.storageKey,
+    required this.label,
+    required this.color,
+  });
 
+  final String storageKey;
   final String label;
   final Color color;
+
+  factory NotificationPriority.fromStorage(String value) {
+    final String normalized = value.trim().toLowerCase();
+    for (final NotificationPriority priority in NotificationPriority.values) {
+      if (priority.storageKey == normalized) {
+        return priority;
+      }
+    }
+    return NotificationPriority.normal;
+  }
 }

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
@@ -85,6 +86,8 @@ class NotificationHistoryList extends StatelessWidget {
                 child: Row(
                   children: const <Widget>[
                     _HeaderCell(label: 'Title', flex: 3),
+                    SizedBox(width: 16),
+                    _HeaderCell(label: 'Sent By', flex: 2),
                     SizedBox(width: 16),
                     _HeaderCell(label: 'Audience', flex: 2),
                     SizedBox(width: 16),
@@ -176,6 +179,8 @@ class _NotificationRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
+          Expanded(flex: 2, child: _BodyText(notification.senderLabel)),
+          const SizedBox(width: 16),
           Expanded(flex: 2, child: _BodyText(notification.audience.label)),
           const SizedBox(width: 16),
           Expanded(flex: 2, child: _BodyText(notification.department)),
@@ -245,6 +250,10 @@ class _NotificationCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: <Widget>[
+              _MetaChip(
+                label: notification.senderLabel,
+                color: AppColors.tangerineDream,
+              ),
               _MetaChip(
                 label: notification.audience.label,
                 color: AppColors.coolSky,
@@ -486,6 +495,9 @@ class NotificationRecord {
     required this.priority,
     required this.sentTime,
     required this.status,
+    required this.senderRole,
+    required this.senderName,
+    required this.createdAt,
   });
 
   final String id;
@@ -496,6 +508,137 @@ class NotificationRecord {
   final NotificationPriority priority;
   final String sentTime;
   final NotificationDeliveryStatus status;
+  final String senderRole;
+  final String senderName;
+  final DateTime? createdAt;
+
+  String get senderLabel {
+    final String normalizedRole = senderRole.trim().toLowerCase();
+    if (senderName.trim().isNotEmpty && senderName.trim() != 'Unknown Sender') {
+      return '$senderName (${_senderRoleLabel(normalizedRole)})';
+    }
+    return _senderRoleLabel(normalizedRole);
+  }
+
+  factory NotificationRecord.fromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final Map<String, dynamic> data = doc.data() ?? <String, dynamic>{};
+    final DateTime? sentAt = _readDateTime(
+      data['sentAt'] ?? data['createdAt'] ?? data['updatedAt'],
+    );
+
+    return NotificationRecord(
+      id: doc.id,
+      title: _readString(data['title'], fallback: 'Untitled notification'),
+      message: _readString(data['message'], fallback: 'No message'),
+      audience: NotificationAudienceRole.fromStorage(
+        _readString(data['audience'], fallback: 'all_roles'),
+      ),
+      department: _readString(
+        data['department'],
+        fallback: 'All departments',
+      ),
+      priority: NotificationPriority.fromStorage(
+        _readString(data['priority'], fallback: 'normal'),
+      ),
+      sentTime: _formatSentTime(sentAt),
+      status: NotificationDeliveryStatus.fromStorage(
+        _readString(data['status'], fallback: 'draft'),
+      ),
+      senderRole: _readString(data['senderRole'], fallback: 'unknown'),
+      senderName: _readString(
+        data['senderName'] ?? data['createdByName'],
+        fallback: 'Unknown Sender',
+      ),
+      createdAt: sentAt,
+    );
+  }
+
+  static String _readString(dynamic value, {required String fallback}) {
+    if (value == null) {
+      return fallback;
+    }
+
+    final String normalized = value.toString().trim();
+    return normalized.isEmpty ? fallback : normalized;
+  }
+
+  static DateTime? _readDateTime(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    return null;
+  }
+
+  static String _formatSentTime(DateTime? sentAt) {
+    if (sentAt == null) {
+      return 'Not available';
+    }
+
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    final DateTime targetDay = DateTime(sentAt.year, sentAt.month, sentAt.day);
+    final int difference = today.difference(targetDay).inDays;
+    final String hour = ((sentAt.hour % 12 == 0) ? 12 : sentAt.hour % 12)
+        .toString()
+        .padLeft(2, '0');
+    final String minute = sentAt.minute.toString().padLeft(2, '0');
+    final String meridiem = sentAt.hour >= 12 ? 'PM' : 'AM';
+
+    if (difference == 0) {
+      return 'Today, $hour:$minute $meridiem';
+    }
+    if (difference == 1) {
+      return 'Yesterday, $hour:$minute $meridiem';
+    }
+    if (difference == -1) {
+      return 'Tomorrow, $hour:$minute $meridiem';
+    }
+
+    const List<String> months = <String>[
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+
+    return '${sentAt.day.toString().padLeft(2, '0')} '
+        '${months[sentAt.month - 1]} ${sentAt.year}, $hour:$minute $meridiem';
+  }
+
+  static String _senderRoleLabel(String value) {
+    switch (value) {
+      case 'admin':
+        return 'Admin';
+      case 'hod':
+      case 'hods':
+        return 'HOD';
+      case 'principal':
+        return 'Principal';
+      case 'faculty':
+      case 'faculty_mentor':
+      case 'facultymentor':
+        return 'Faculty';
+      case 'mentor':
+      case 'company_mentor':
+      case 'companymentor':
+        return 'Mentor';
+      default:
+        return 'Unknown';
+    }
+  }
 }
 
 enum NotificationDeliveryStatus {
@@ -529,4 +672,18 @@ enum NotificationDeliveryStatus {
   final String label;
   final Color color;
   final Color backgroundColor;
+
+  factory NotificationDeliveryStatus.fromStorage(String value) {
+    final String normalized = value.trim().toLowerCase();
+    switch (normalized) {
+      case 'sent':
+        return NotificationDeliveryStatus.sent;
+      case 'scheduled':
+        return NotificationDeliveryStatus.scheduled;
+      case 'failed':
+        return NotificationDeliveryStatus.failed;
+      default:
+        return NotificationDeliveryStatus.draft;
+    }
+  }
 }

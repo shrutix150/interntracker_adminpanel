@@ -12,20 +12,19 @@ enum AdminNavigationItem {
     icon: Icons.verified_user_rounded,
   ),
   students(routeIndex: 2, title: 'Students', icon: Icons.school_rounded),
-  reports(routeIndex: 3, title: 'Reports', icon: Icons.insert_chart_rounded),
-  mentors(routeIndex: 4, title: 'Mentors', icon: Icons.groups_rounded),
+  mentors(routeIndex: 3, title: 'Mentors', icon: Icons.groups_rounded),
   companies(
-    routeIndex: 5,
+    routeIndex: 4,
     title: 'Companies',
     icon: Icons.business_center_rounded,
   ),
   notifications(
-    routeIndex: 6,
+    routeIndex: 5,
     title: 'Notifications',
     icon: Icons.notifications_outlined,
   ),
-  settings(routeIndex: 7, title: 'Settings', icon: Icons.settings_rounded),
-  logout(routeIndex: 8, title: 'Logout', icon: Icons.logout_rounded);
+  settings(routeIndex: 6, title: 'Settings', icon: Icons.settings_rounded),
+  logout(routeIndex: 7, title: 'Logout', icon: Icons.logout_rounded);
 
   const AdminNavigationItem({
     required this.routeIndex,
