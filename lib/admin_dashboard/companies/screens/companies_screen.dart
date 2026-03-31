@@ -153,6 +153,7 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
                                     onView: _handleView,
                                     onEdit: _handleEdit,
                                     onVerify: _handleVerify,
+                                    onDelete: _handleDelete,
                                   ),
                               ],
                             ),
@@ -174,6 +175,34 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
                     ],
                   ],
                 ),
+                if (_selectedCompany != null && !showSidePanel)
+                  Positioned.fill(
+                    child: Container(
+                      color: AppColors.overlay,
+                      child: Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _selectedCompany = null),
+                              child: Container(color: Colors.transparent),
+                            ),
+                          ),
+                          SizedBox(
+                            width: constraints.maxWidth.clamp(320.0, 440.0),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: CompanyDetailPanel(
+                                company: _selectedCompany!,
+                                onClose: () => setState(() => _selectedCompany = null),
+                                onEdit: _handleEdit,
+                                onVerify: _handleVerify,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
               ],
             );
           },
@@ -200,19 +229,28 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
 
   void _syncSelection(List<CompanyRecord> companies) {
     if (_selectedCompany == null) return;
+    CompanyRecord? refreshedSelection;
     for (final CompanyRecord company in companies) {
       if (company.id == _selectedCompany!.id) {
-        if (company != _selectedCompany) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) setState(() => _selectedCompany = company);
-          });
-        }
-        return;
+        refreshedSelection = company;
+        break;
       }
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _selectedCompany = null);
-    });
+    if (refreshedSelection == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() => _selectedCompany = null);
+        }
+      });
+      return;
+    }
+    if (refreshedSelection != _selectedCompany) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() => _selectedCompany = refreshedSelection);
+        }
+      });
+    }
   }
 
   void _resetFilters() {
@@ -242,6 +280,10 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
     } catch (error) {
       _showMessage('Unable to verify company. $error');
     }
+  }
+
+  void _handleDelete(CompanyRecord company) {
+    // Delete action placeholder - UI only for now
   }
 
   Future<void> _openCompanyDialog({CompanyRecord? existingCompany}) async {

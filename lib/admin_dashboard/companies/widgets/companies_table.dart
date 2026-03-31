@@ -11,12 +11,14 @@ class CompaniesTable extends StatelessWidget {
     required this.onView,
     required this.onEdit,
     required this.onVerify,
+    required this.onDelete,
   });
 
   final List<CompanyRecord> companies;
   final ValueChanged<CompanyRecord> onView;
   final ValueChanged<CompanyRecord> onEdit;
   final ValueChanged<CompanyRecord> onVerify;
+  final ValueChanged<CompanyRecord> onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +53,7 @@ class CompaniesTable extends StatelessWidget {
                         onView: onView,
                         onEdit: onEdit,
                         onVerify: onVerify,
+                        onDelete: onDelete,
                       ),
                     ),
                   )
@@ -97,6 +100,7 @@ class CompaniesTable extends StatelessWidget {
                     onView: onView,
                     onEdit: onEdit,
                     onVerify: onVerify,
+                    onDelete: onDelete,
                   ),
                 ),
               ),
@@ -134,12 +138,14 @@ class _CompanyRow extends StatefulWidget {
     required this.onView,
     required this.onEdit,
     required this.onVerify,
+    required this.onDelete,
   });
 
   final CompanyRecord company;
   final ValueChanged<CompanyRecord> onView;
   final ValueChanged<CompanyRecord> onEdit;
   final ValueChanged<CompanyRecord> onVerify;
+  final ValueChanged<CompanyRecord> onDelete;
 
   @override
   State<_CompanyRow> createState() => _CompanyRowState();
@@ -205,6 +211,7 @@ class _CompanyRowState extends State<_CompanyRow> {
                 onView: widget.onView,
                 onEdit: widget.onEdit,
                 onVerify: widget.onVerify,
+                onDelete: widget.onDelete,
               ),
             ),
           ],
@@ -220,12 +227,14 @@ class _CompanyCard extends StatefulWidget {
     required this.onView,
     required this.onEdit,
     required this.onVerify,
+    required this.onDelete,
   });
 
   final CompanyRecord company;
   final ValueChanged<CompanyRecord> onView;
   final ValueChanged<CompanyRecord> onEdit;
   final ValueChanged<CompanyRecord> onVerify;
+  final ValueChanged<CompanyRecord> onDelete;
 
   @override
   State<_CompanyCard> createState() => _CompanyCardState();
@@ -280,6 +289,7 @@ class _CompanyCardState extends State<_CompanyCard> {
               onView: widget.onView,
               onEdit: widget.onEdit,
               onVerify: widget.onVerify,
+              onDelete: widget.onDelete,
               compact: true,
             ),
           ],
@@ -371,6 +381,7 @@ class _ActionGroup extends StatelessWidget {
     required this.onView,
     required this.onEdit,
     required this.onVerify,
+    required this.onDelete,
     this.compact = false,
   });
 
@@ -378,6 +389,7 @@ class _ActionGroup extends StatelessWidget {
   final ValueChanged<CompanyRecord> onView;
   final ValueChanged<CompanyRecord> onEdit;
   final ValueChanged<CompanyRecord> onVerify;
+  final ValueChanged<CompanyRecord> onDelete;
   final bool compact;
 
   @override
@@ -406,6 +418,13 @@ class _ActionGroup extends StatelessWidget {
           color: AppColors.aquamarine,
           compact: compact,
           onTap: () => onVerify(company),
+        ),
+        _ActionButton(
+          label: 'Delete',
+          icon: Icons.delete_outline,
+          color: AppColors.strawberryRed,
+          compact: compact,
+          onTap: () => onDelete(company),
         ),
       ],
     );
