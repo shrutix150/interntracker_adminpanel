@@ -348,6 +348,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
       try {
         final List<StudentRecord> students = userDocs
             .map(StudentRecord.fromFirestore)
+            .where((student) => student.isDeleted != true)
             .map(
               (student) {
                 final StudentRecord withAttendance = _applyAttendanceMetrics(
@@ -372,7 +373,6 @@ class _StudentsScreenState extends State<StudentsScreen> {
         usersSubscription = _firestore
             .collection('user')
             .where('role', isEqualTo: 'student')
-            .where('isDeleted', isNotEqualTo: true)
             .snapshots()
             .listen(
               (snapshot) {

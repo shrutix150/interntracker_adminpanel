@@ -67,9 +67,13 @@ class AdminTopbar extends StatelessWidget {
                 )
               : Row(
                   children: <Widget>[
-                    Expanded(flex: 4, child: _TopbarHeading(title: title)),
+                    Expanded(flex: 3, child: _TopbarHeading(title: title)),
                     const SizedBox(width: 18),
-                    const Expanded(flex: 5, child: _SearchField()),
+                    Flexible(
+                      flex: 3,
+                      fit: FlexFit.loose,
+                      child: const _SearchField(),
+                    ),
                     const SizedBox(width: 16),
                     _NotificationAction(
                       onPressed: onNotificationTap,
@@ -137,41 +141,15 @@ class _SearchField extends StatelessWidget {
           border: InputBorder.none,
           hintText: 'Search students, approvals, mentors, or companies',
           hintStyle: AppTextStyles.body.copyWith(color: AppColors.textMuted),
-          prefixIcon: Container(
-            margin: EdgeInsets.all(compact ? 8 : 10),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(14),
-            ),
+          prefixIcon: Padding(
+            padding: EdgeInsets.all(compact ? 12 : 14),
             child: const Icon(
               Icons.search_rounded,
               size: 20,
               color: AppColors.coolSky,
             ),
           ),
-          suffixIcon: Padding(
-            padding: const EdgeInsets.only(right: 10),
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Text(
-                  'Ctrl K',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ),
+          suffixIcon: null,
         ),
       ),
     );
