@@ -390,9 +390,9 @@ class _ActionGroup extends StatelessWidget {
           onTap: () => onEdit(mentor),
         ),
         _ActionButton(
-          label: 'Message',
-          icon: Icons.chat_bubble_outline_rounded,
-          color: AppColors.aquamarine,
+          label: 'Delete',
+          icon: Icons.delete_outline,
+          color: AppColors.strawberryRed,
           compact: compact,
           onTap: () => onMessage(mentor),
         ),
@@ -543,6 +543,8 @@ class MentorRecord {
     required this.designation,
     required this.status,
     required this.createdAt,
+    this.isDeleted = false,
+    this.deletedAt,
   });
 
   final String id;
@@ -556,6 +558,8 @@ class MentorRecord {
   final String designation;
   final MentorStatus status;
   final DateTime? createdAt;
+  final bool isDeleted;
+  final DateTime? deletedAt;
 
   String get initials {
     final List<String> parts = name.trim().split(' ');
@@ -611,13 +615,18 @@ class MentorRecord {
       type: MentorType.fromFirestore(role),
       department: _readNullableString(<dynamic>[
         data['department'],
+        data['dept'],
         data['branch'],
         data['facultyDepartment'],
+        data['unit'],
+        data['division'],
       ]),
       company: _readNullableString(<dynamic>[
-        data['companyName'],
+        data['company_name'],
         data['company'],
         data['organization'],
+        data['employer'],
+        data['firm'],
       ]),
       phoneNumber: _readString(
         data['phoneNumber'] ?? data['phone'] ?? data['mobileNumber'],
@@ -638,6 +647,10 @@ class MentorRecord {
       createdAt: _readDateTime(
         data['createdAt'] ?? data['updatedAt'] ?? data['requestDate'],
       ),
+      isDeleted: data['isDeleted'] ?? false,
+      deletedAt: data['deletedAt'] is Timestamp
+          ? (data['deletedAt'] as Timestamp).toDate()
+          : null,
     );
   }
 

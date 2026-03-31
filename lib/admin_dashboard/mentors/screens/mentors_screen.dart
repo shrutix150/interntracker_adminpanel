@@ -261,6 +261,7 @@ class _MentorsScreenState extends State<MentorsScreen> {
         .map((snapshot) {
           final List<MentorRecord> mentors = snapshot.docs
               .map(MentorRecord.fromFirestore)
+              .where((mentor) => mentor.isDeleted != true)
               .toList(growable: false)
             ..sort((a, b) {
               final DateTime aDate =
@@ -358,7 +359,92 @@ class _MentorsScreenState extends State<MentorsScreen> {
   }
 
   void _handleMessage(MentorRecord mentor) {
-    _showActionFeedback('Messaging ${mentor.name}');
+    _showDeleteConfirmation(mentor);
+  }
+
+  Future<void> _showDeleteConfirmation(MentorRecord mentor) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text('Delete Mentor?'),
+        content: Text(
+          'Are you sure you want to delete ${mentor.name}? You can undo this action for a short time.',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(
+              'Delete',
+              style: TextStyle(color: AppColors.strawberryRed),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await _performSoftDelete(mentor);
+    }
+  }
+
+  Future<void> _performSoftDelete(MentorRecord mentor) async {
+    try {
+      await _firestore.collection('user').doc(mentor.id).update({
+        'isDeleted': true,
+        'deletedAt': FieldValue.serverTimestamp(),
+      });
+
+      if (mounted) {
+        setState(() => _selectedMentor = null);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Deleted ${mentor.name}',
+              style: const TextStyle(color: AppColors.textOnDark),
+            ),
+            backgroundColor: const Color(0xFF1A1A1A),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(24),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 8,
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'UNDO',
+              textColor: AppColors.coolSky,
+              onPressed: () => _performUndo(mentor),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showActionFeedback('Error deleting mentor: $e');
+      }
+    }
+  }
+
+  Future<void> _performUndo(MentorRecord mentor) async {
+    try {
+      await _firestore.collection('user').doc(mentor.id).update({
+        'isDeleted': false,
+      });
+
+      if (mounted) {
+        _showActionFeedback('${mentor.name} restored');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showActionFeedback('Error restoring mentor: $e');
+      }
+    }
   }
 
   void _showActionFeedback(String message) {
