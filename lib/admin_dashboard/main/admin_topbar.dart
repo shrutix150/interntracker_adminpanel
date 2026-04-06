@@ -47,46 +47,16 @@ class AdminTopbar extends StatelessWidget {
                   children: <Widget>[
                     _TopbarHeading(title: title),
                     const SizedBox(height: 16),
-                    const _SearchField(),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      alignment: WrapAlignment.end,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: <Widget>[
-                        _NotificationAction(
-                          onPressed: onNotificationTap,
-                          layerLink: notificationBellLink,
-                          isActive: notificationsOpen,
-                        ),
-                        _ProfileCard(),
-                      ],
-                    ),
+                    const _InstituteIdentity(),
                   ],
                 )
               : Row(
                   children: <Widget>[
                     Expanded(flex: 3, child: _TopbarHeading(title: title)),
                     const SizedBox(width: 18),
-                    Flexible(
-                      flex: 3,
-                      fit: FlexFit.loose,
-                      child: const _SearchField(),
-                    ),
+                    const Expanded(child: SizedBox()),
                     const SizedBox(width: 16),
-                    _NotificationAction(
-                      onPressed: onNotificationTap,
-                      layerLink: notificationBellLink,
-                      isActive: notificationsOpen,
-                    ),
-                    SizedBox(width: isUltraCompact ? 10 : 12),
-                    Flexible(
-                      child: const Align(
-                        alignment: Alignment.centerRight,
-                        child: _ProfileCard(),
-                      ),
-                    ),
+                    const _InstituteIdentity(),
                   ],
                 ),
         );
@@ -305,6 +275,70 @@ class _ProfileCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _InstituteIdentity extends StatelessWidget {
+  const _InstituteIdentity();
+
+  @override
+  Widget build(BuildContext context) {
+    final bool compact = MediaQuery.sizeOf(context).width < 980;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        if (!compact)
+          Container(
+            width: 1,
+            height: 44,
+            margin: const EdgeInsets.only(right: 14),
+            decoration: BoxDecoration(
+              color: AppColors.border.withOpacity(0.6),
+              borderRadius: BorderRadius.circular(1),
+            ),
+          ),
+        Image.asset(
+          'assets/images/gpc_logo.png',
+          height: 32,
+          width: 32,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            return const Icon(
+              Icons.school_rounded,
+              color: AppColors.coolSky,
+              size: 32,
+            );
+          },
+        ),
+        const SizedBox(width: 10),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              'Government Polytechnic',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textPrimary.withOpacity(0.88),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Chhatrapati Sambhajinagar',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textPrimary.withOpacity(0.72),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

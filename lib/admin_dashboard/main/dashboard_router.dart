@@ -6,6 +6,7 @@ import '../companies/screens/companies_screen.dart';
 import '../mentors/screens/mentors_screen.dart';
 import '../notifications/screens/notifications_screen.dart';
 import '../students/screens/students_screen.dart';
+import '../hod/hod_management_screen.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import 'admin_navigation_item.dart';
@@ -30,15 +31,10 @@ class DashboardRouter extends StatelessWidget {
         return const CompaniesScreen();
       case AdminNavigationItem.notifications:
         return const NotificationsScreen();
+      case AdminNavigationItem.hodManagement:
+        return const HodManagementScreen();
       case AdminNavigationItem.settings:
-        return const _SectionPlaceholderPage(
-          title: 'Settings',
-          eyebrow: 'Workspace Preferences',
-          description:
-              'Configure platform preferences, admin controls, and operational rules with clarity and confidence.',
-          accentColor: AppColors.tangerineDream,
-          icon: Icons.settings_rounded,
-        );
+        return const _AdminProfilePage();
       case AdminNavigationItem.logout:
         return const _SectionPlaceholderPage(
           title: 'Logout',
@@ -307,6 +303,196 @@ class _SectionPlaceholderPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AdminProfilePage extends StatelessWidget {
+  const _AdminProfilePage();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(top: 24, left: 0, right: 0, bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text('Admin Profile', style: AppTextStyles.pageTitle),
+          const SizedBox(height: 8),
+          Text(
+            'Review your account information, organization details, and system settings in one place.',
+            style: AppTextStyles.body.copyWith(
+              color: AppColors.textPrimary.withOpacity(0.74),
+            ),
+          ),
+          const SizedBox(height: 28),
+          _ProfileSection(
+            title: 'Admin Details',
+            children: <Widget>[
+              _ProfileTile(
+                icon: Icons.email_outlined,
+                label: 'Email',
+                value: 'admin@interntracker.com',
+              ),
+              _ProfileTile(
+                icon: Icons.badge_outlined,
+                label: 'Role',
+                value: 'Admin',
+              ),
+              _ProfileTile(
+                icon: Icons.account_balance_rounded,
+                label: 'College Name',
+                value: 'Government Polytechnic Chhatrapati Sambhajinagar',
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _ProfileSection(
+            title: 'Organization Details',
+            children: <Widget>[
+              _ProfileTile(
+                icon: Icons.account_balance_rounded,
+                label: 'College Name',
+                value: 'Government Polytechnic Chhatrapati Sambhajinagar',
+              ),
+              _ProfileTile(
+                icon: Icons.code_rounded,
+                label: 'Institute Code',
+                value: '02010',
+              ),
+              _ProfileTile(
+                icon: Icons.location_on_outlined,
+                label: 'Location',
+                value: 'Station Road, Usmanpura, Rachanakar Colony, New Usmanpura, Chhatrapati Sambhajinagar, Maharashtra 431005',
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _ProfileSection(
+            title: 'System Info',
+            children: <Widget>[
+              _ProfileTile(
+                icon: Icons.info_outline,
+                label: 'App Name',
+                value: 'InternTracker Admin',
+              ),
+              _ProfileTile(
+                icon: Icons.system_update_alt_rounded,
+                label: 'Version',
+                value: '1.0',
+              ),
+              _ProfileTile(
+                icon: Icons.cloud_outlined,
+                label: 'Database',
+                value: 'Firebase',
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _ProfileSection(
+            title: 'Account Actions',
+            children: <Widget>[
+              _ActionTile(
+                icon: Icons.edit_outlined,
+                label: 'Edit Profile',
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Edit Profile action coming soon.')),
+                  );
+                },
+              ),
+              _ActionTile(
+                icon: Icons.lock_outline,
+                label: 'Change Password',
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Change Password action coming soon.') ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileSection extends StatelessWidget {
+  const _ProfileSection({
+    required this.title,
+    required this.children,
+  });
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: Text(title, style: AppTextStyles.sectionTitle.copyWith(fontSize: 18)),
+          ),
+          const SizedBox(height: 8),
+          ...children,
+          const SizedBox(height: 14),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileTile extends StatelessWidget {
+  const _ProfileTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, color: AppColors.coolSky),
+      title: Text(label, style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w700)),
+      subtitle: Text(value, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textPrimary)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      onTap: onTap,
+      leading: Icon(icon, color: AppColors.aquamarine),
+      title: Text(label, style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w700)),
+      trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
     );
   }
 }

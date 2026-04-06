@@ -24,8 +24,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       builder: (context, snapshot) {
         final bool hasError = snapshot.hasError;
         final bool isLoading = !snapshot.hasData && !hasError;
-        final DashboardOverview overview =
-            snapshot.data ?? _fallbackOverview();
+        final DashboardOverview overview = snapshot.data ?? _fallbackOverview();
         final DashboardStats stats = overview.stats;
 
         return ListView(
@@ -109,7 +108,8 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
             const SizedBox(height: 28),
             const _SectionHeader(
               title: 'Overview',
-              subtitle: 'Quick operational summary based on live Firebase data.',
+              subtitle:
+                  'Quick operational summary based on live Firebase data.',
             ),
             const SizedBox(height: 16),
             LayoutBuilder(
@@ -225,69 +225,19 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
             _ActivityPanel(activities: overview.activities),
             const SizedBox(height: 28),
             const _SectionHeader(
-              title: 'Admin Role Creation',
+              title: 'Create Principal Account',
               subtitle:
-                  'Create Principal and HOD accounts and save them to Firebase.',
+                  'Register the principal account with email, password, and profile details.',
             ),
             const SizedBox(height: 16),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final bool compact = constraints.maxWidth < 920;
-
-                if (compact) {
-                  return Column(
-                    children: <Widget>[
-                      _RoleCreationCard(
-                        title: 'Create Principal',
-                        subtitle:
-                            'Register the principal account with email, password, and profile details.',
-                        icon: Icons.workspace_premium_rounded,
-                        color: AppColors.coolSky,
-                        role: 'principal',
-                        onCreate: () => _showRoleCreationDialog('principal'),
-                      ),
-                      const SizedBox(height: 16),
-                      _RoleCreationCard(
-                        title: 'Create HOD',
-                        subtitle:
-                            'Add a head of department account and store it in Firebase user records.',
-                        icon: Icons.account_tree_rounded,
-                        color: AppColors.aquamarine,
-                        role: 'hod',
-                        onCreate: () => _showRoleCreationDialog('hod'),
-                      ),
-                    ],
-                  );
-                }
-
-                return Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: _RoleCreationCard(
-                        title: 'Create Principal',
-                        subtitle:
-                            'Register the principal account with email, password, and profile details.',
-                        icon: Icons.workspace_premium_rounded,
-                        color: AppColors.coolSky,
-                        role: 'principal',
-                        onCreate: () => _showRoleCreationDialog('principal'),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _RoleCreationCard(
-                        title: 'Create HOD',
-                        subtitle:
-                            'Add a head of department account and store it in Firebase user records.',
-                        icon: Icons.account_tree_rounded,
-                        color: AppColors.aquamarine,
-                        role: 'hod',
-                        onCreate: () => _showRoleCreationDialog('hod'),
-                      ),
-                    ),
-                  ],
-                );
-              },
+            _RoleCreationCard(
+              title: 'Create Principal',
+              subtitle:
+                  'Register the principal account with email, password, and profile details.',
+              icon: Icons.workspace_premium_rounded,
+              color: AppColors.coolSky,
+              role: 'principal',
+              onCreate: () => _showRoleCreationDialog('principal'),
             ),
           ],
         );
@@ -321,7 +271,9 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       ),
       activeThisWeek: 0,
       approvalTurnaroundLabel: 'No live data yet',
-      lineChartData: const DashboardLineChartData(points: <DashboardLinePoint>[]),
+      lineChartData: const DashboardLineChartData(
+        points: <DashboardLinePoint>[],
+      ),
       donutChartData: const DashboardDonutChartData(
         sections: <DashboardDonutSectionData>[],
       ),
@@ -421,15 +373,16 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                           setDialogState(() => saving = true);
 
                           try {
-                            await AdminAuthController.instance.createManagedUser(
-                              name: nameController.text.trim(),
-                              email: emailController.text.trim(),
-                              password: passwordController.text.trim(),
-                              role: role,
-                              phoneNumber: phoneController.text.trim(),
-                              department: departmentController.text.trim(),
-                              employeeId: employeeIdController.text.trim(),
-                            );
+                            await AdminAuthController.instance
+                                .createManagedUser(
+                                  name: nameController.text.trim(),
+                                  email: emailController.text.trim(),
+                                  password: passwordController.text.trim(),
+                                  role: role,
+                                  phoneNumber: phoneController.text.trim(),
+                                  department: departmentController.text.trim(),
+                                  employeeId: employeeIdController.text.trim(),
+                                );
 
                             if (!mounted) {
                               return;
@@ -539,6 +492,8 @@ class _HeroCard extends StatelessWidget {
             ],
           );
 
+          final int activeInternshipsCount = overview.stats.activeInternships;
+
           final Widget stats = Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -549,8 +504,8 @@ class _HeroCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 _HeroStat(
-                  label: 'Active this week',
-                  value: '${overview.activeThisWeek} internships',
+                  label: 'Active Internships',
+                  value: '$activeInternshipsCount internships',
                   color: AppColors.coolSky,
                 ),
                 const SizedBox(height: 16),
@@ -566,11 +521,7 @@ class _HeroCard extends StatelessWidget {
           if (compact) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                content,
-                const SizedBox(height: 20),
-                stats,
-              ],
+              children: <Widget>[content, const SizedBox(height: 20), stats],
             );
           }
 
@@ -744,10 +695,7 @@ class _SummaryRowData {
 }
 
 class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({
-    required this.title,
-    required this.rows,
-  });
+  const _SummaryCard({required this.title, required this.rows});
 
   final String title;
   final List<_SummaryRowData> rows;
@@ -837,69 +785,69 @@ class _ActivityPanel extends StatelessWidget {
       child: activities.isEmpty
           ? Text(
               'No recent activity available yet.',
-              style: AppTextStyles.body.copyWith(
-                color: AppColors.textPrimary,
-              ),
+              style: AppTextStyles.body.copyWith(color: AppColors.textPrimary),
             )
           : Column(
-              children: activities.map<Widget>((ActivityItem activity) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.background,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: activity.accentColor.withOpacity(0.18),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            activity.initials,
-                            style: AppTextStyles.label.copyWith(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
+              children: activities
+                  .map<Widget>((ActivityItem activity) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: AppColors.border),
                         ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Text(
-                                activity.entity,
-                                style: AppTextStyles.sectionTitle.copyWith(
-                                  fontSize: 16,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: activity.accentColor.withOpacity(0.18),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                activity.initials,
+                                style: AppTextStyles.label.copyWith(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                activity.action,
-                                style: AppTextStyles.body,
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Text(
+                                    activity.entity,
+                                    style: AppTextStyles.sectionTitle.copyWith(
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    activity.action,
+                                    style: AppTextStyles.body,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '${activity.role} • ${activity.time}',
+                                    style: AppTextStyles.bodySmall,
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${activity.role} • ${activity.time}',
-                                style: AppTextStyles.bodySmall,
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(growable: false),
+                      ),
+                    );
+                  })
+                  .toList(growable: false),
             ),
     );
   }
@@ -1011,7 +959,7 @@ class _AdminInputField extends StatelessWidget {
       obscureText: obscureText,
       validator: required
           ? (value) =>
-              (value ?? '').trim().isEmpty ? 'This field is required.' : null
+                (value ?? '').trim().isEmpty ? 'This field is required.' : null
           : null,
       decoration: InputDecoration(labelText: label),
     );

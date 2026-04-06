@@ -63,6 +63,7 @@ class DashboardController {
 
       final DateTime now = DateTime.now();
       final DateTime startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+      final DateTime endOfWeek = startOfWeek.add(const Duration(days: 7)).subtract(const Duration(milliseconds: 1));
       final List<_DashboardUserSnapshot> users = snapshot.docs
           .map(_DashboardUserSnapshot.tryFromFirestore)
           .whereType<_DashboardUserSnapshot>()
@@ -100,9 +101,8 @@ class DashboardController {
             break;
         }
 
-        if (user.createdAt != null &&
-            user.createdAt!.isAfter(startOfWeek) &&
-            user.internshipStatus == 'ongoing') {
+        if (user.internshipStatus == 'ongoing' &&
+            user.isActiveDuringWeek(startOfWeek, endOfWeek)) {
           activeThisWeek++;
         }
       }
@@ -322,6 +322,8 @@ class _DashboardUserSnapshot {
     required this.status,
     required this.internshipStatus,
     required this.createdAt,
+    required this.startDate,
+    required this.endDate,
   });
 
   final String name;
@@ -330,6 +332,8 @@ class _DashboardUserSnapshot {
   final String status;
   final String internshipStatus;
   final DateTime? createdAt;
+  final DateTime? startDate;
+  final DateTime? endDate;
 
   factory _DashboardUserSnapshot.fromFirestore(
     QueryDocumentSnapshot<Map<String, dynamic>> doc,
@@ -345,6 +349,8 @@ class _DashboardUserSnapshot {
         data['internshipStatus'] ?? 'pending',
       ).toLowerCase(),
       createdAt: _readDateTime(data['createdAt']),
+      startDate: _readDateTime(data['startDate']),
+      endDate: _readDateTime(data['endDate']),
     );
   }
 
@@ -372,6 +378,19 @@ class _DashboardUserSnapshot {
       return DateTime.tryParse(value);
     }
     return null;
+  }
+
+  bool isActiveDuringWeek(DateTime startOfWeek, DateTime endOfWeek) {
+    final DateTime? start = startDate ?? createdAt;
+    if (start == null) {
+      return false;
+    }
+
+    final bool startsOnOrBeforeWeekEnd = !start.isAfter(endOfWeek);
+    final bool endsOnOrAfterWeekStart =
+        endDate == null || !endDate!.isBefore(startOfWeek);
+
+    return startsOnOrBeforeWeekEnd && endsOnOrAfterWeekStart;
   }
 
   static String _readString(dynamic value) {
