@@ -704,7 +704,10 @@ class StudentRecord {
       rollNumber: _readRollNumber(data, doc.id),
       department: _readString(data['department'] ?? data['dept'], 'Unassigned'),
       year: StudentYear.fromFirestore(data['year']),
-      company: _readString(data['companyName'] ?? data['company'], 'Not Assigned'),
+      company: _readString(
+        data['companyName'] ?? data['company'],
+        'Not Assigned',
+      ),
       internshipRole: _readString(
         data['internshipRole'] ?? data['roleTitle'],
         'Intern',
@@ -712,80 +715,66 @@ class StudentRecord {
       duration: _readString(data['duration'], 'Not specified'),
       startDate: _formatDate(data['startDate']),
       endDate: _formatDate(data['endDate']),
-      facultyMentor: _readPersonLike(
-        <dynamic>[
-          data['assignedFaculty'],
-          data['assignedFacultyName'],
-          data['facultyMentor'],
-          data['facultyMentorName'],
-          data['facultyName'],
-          data['mentorFaculty'],
-        ],
-        'Not Assigned',
-      ),
-      companyMentor: _readPersonLike(
-        <dynamic>[
-          data['assignedMentor'],
-          data['assignedMentorName'],
-          data['companyMentor'],
-          data['companyMentorName'],
-          data['mentor'],
-          data['mentorName'],
-          data['guideName'],
-          data['industryMentor'],
-        ],
-        'Not Assigned',
-      ),
+      facultyMentor: _readPersonLike(<dynamic>[
+        data['collegeMentor'],
+        data['collegeMentorName'],
+        data['assignedFaculty'],
+        data['assignedFacultyName'],
+        data['facultyMentor'],
+        data['facultyMentorName'],
+        data['facultyName'],
+        data['mentorFaculty'],
+      ], 'Not Assigned'),
+      companyMentor: _readPersonLike(<dynamic>[
+        data['assignedMentor'],
+        data['assignedMentorName'],
+        data['companyMentor'],
+        data['companyMentorName'],
+        data['mentor'],
+        data['mentorName'],
+        data['guideName'],
+        data['industryMentor'],
+      ], 'Not Assigned'),
       status: StudentInternshipStatus.fromFirestore(
         data['internshipStatus'] ?? data['status'],
       ),
-      attendance: _readFirstInt(
-        <dynamic>[
-          data['attendance'],
-          data['attendancePercentage'],
-          data['attendancePercent'],
-          data['overallAttendance'],
-          data['attendanceRate'],
-          data['attendance_rate'],
-          data['stats'] is Map ? data['stats']['attendance'] : null,
-        ],
-        fallback: 0,
-      ),
-      progress: _readFirstInt(
-        <dynamic>[
-          data['progress'],
-          data['progressPercentage'],
-          data['progressPercent'],
-          data['completion'],
-          data['completionPercentage'],
-          data['stats'] is Map ? data['stats']['progress'] : null,
-        ],
-        fallback: 0,
-      ),
-      weeklyCheckIns: _readFirstInt(
-        <dynamic>[
-          data['weeklyCheckIns'],
-          data['weeklyCheckIn'],
-          data['weeklyCheckin'],
-          data['checkIns'],
-          data['checkInCount'],
-          data['stats'] is Map ? data['stats']['weeklyCheckIns'] : null,
-        ],
-        fallback: 0,
-      ),
-      missedLogs: _readFirstInt(
-        <dynamic>[
-          data['missedLogs'],
-          data['missedLogCount'],
-          data['missedCheckIns'],
-          data['pendingLogs'],
-          data['stats'] is Map ? data['stats']['missedLogs'] : null,
-        ],
-        fallback: 0,
-      ),
+      attendance: _readFirstInt(<dynamic>[
+        data['attendance'],
+        data['attendancePercentage'],
+        data['attendancePercent'],
+        data['overallAttendance'],
+        data['attendanceRate'],
+        data['attendance_rate'],
+        data['stats'] is Map ? data['stats']['attendance'] : null,
+      ], fallback: 0),
+      progress: _readFirstInt(<dynamic>[
+        data['progress'],
+        data['progressPercentage'],
+        data['progressPercent'],
+        data['completion'],
+        data['completionPercentage'],
+        data['stats'] is Map ? data['stats']['progress'] : null,
+      ], fallback: 0),
+      weeklyCheckIns: _readFirstInt(<dynamic>[
+        data['weeklyCheckIns'],
+        data['weeklyCheckIn'],
+        data['weeklyCheckin'],
+        data['checkIns'],
+        data['checkInCount'],
+        data['stats'] is Map ? data['stats']['weeklyCheckIns'] : null,
+      ], fallback: 0),
+      missedLogs: _readFirstInt(<dynamic>[
+        data['missedLogs'],
+        data['missedLogCount'],
+        data['missedCheckIns'],
+        data['pendingLogs'],
+        data['stats'] is Map ? data['stats']['missedLogs'] : null,
+      ], fallback: 0),
       notes: _readNullableString(data['notes'] ?? data['remarks']),
       isDeleted: data['isDeleted'] ?? false,
-      deletedAt: data['deletedAt'] is Timestamp ? (data['deletedAt'] as Timestamp).toDate() : null,
+      deletedAt: data['deletedAt'] is Timestamp
+          ? (data['deletedAt'] as Timestamp).toDate()
+          : null,
     );
   }
 
@@ -842,6 +831,7 @@ class StudentRecord {
               value['fullName'] ??
               value['displayName'] ??
               value['mentorName'] ??
+              value['collegeMentorName'] ??
               value['facultyName'] ??
               value['email'],
         );
