@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
-import '../widgets/students_table.dart';
+import '../models/student_record.dart';
 
 class StudentDetailScreen extends StatelessWidget {
   const StudentDetailScreen({

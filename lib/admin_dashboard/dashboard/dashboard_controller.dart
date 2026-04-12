@@ -10,12 +10,14 @@ class DashboardStats {
     required this.totalStudents,
     required this.totalFaculty,
     required this.pendingApprovals,
+    required this.totalCompanies,
     required this.activeInternships,
   });
 
   final int totalStudents;
   final int totalFaculty;
   final int pendingApprovals;
+  final int totalCompanies;
   final int activeInternships;
 }
 
@@ -50,10 +52,17 @@ class DashboardController {
   final FirebaseFirestore _firestore;
 
   Stream<DashboardOverview> watchOverview() {
-    return _firestore.collection('user').snapshots().map((snapshot) {
+    return _firestore.collection('user').snapshots().asyncMap((snapshot) async {
+      final int pendingApprovals = (await _firestore
+              .collection('user')
+              .where('isApproved', isEqualTo: false)
+              .get())
+          .docs
+          .length;
       int totalStudents = 0;
       int totalFaculty = 0;
-      int pendingApprovals = 0;
+      final int totalCompanies =
+          (await _firestore.collection('company').get()).docs.length;
       int activeInternships = 0;
       int completedInternships = 0;
       int pendingInternships = 0;
@@ -85,10 +94,6 @@ class DashboardController {
           totalFaculty++;
         }
 
-        if (!user.isApproved) {
-          pendingApprovals++;
-        }
-
         switch (user.internshipStatus) {
           case 'ongoing':
             activeInternships++;
@@ -111,6 +116,7 @@ class DashboardController {
         totalStudents: totalStudents,
         totalFaculty: totalFaculty,
         pendingApprovals: pendingApprovals,
+        totalCompanies: totalCompanies,
         activeInternships: activeInternships,
       );
 
@@ -118,12 +124,16 @@ class DashboardController {
           ? 0
           : ((approvedStudents / totalStudents) * 100).round();
 
+      final List<ActivityItem> activities = _buildActivities(users, now);
+      debugPrint('Dashboard overview fetched ${snapshot.docs.length} user docs');
+      debugPrint('Dashboard raw doc sample: ${snapshot.docs.take(3).map((doc) => doc.data()).toList()}');
+      debugPrint('Dashboard metric counts: totalStudents=$totalStudents, totalFaculty=$totalFaculty, pendingApprovals=$pendingApprovals, totalCompanies=$totalCompanies, activeInternships=$activeInternships, activeThisWeek=$activeThisWeek, approvedStudents=$approvedStudents, pendingStudents=$pendingStudents');
+      debugPrint('Recent activity item count: ${activities.length}');
+
       return DashboardOverview(
         stats: stats,
         activeThisWeek: activeThisWeek,
-        approvalTurnaroundLabel: pendingApprovals == 0
-            ? 'Queue clear'
-            : '$pendingApprovals awaiting review',
+        approvalTurnaroundLabel: '$pendingApprovals awaiting review',
         lineChartData: _buildLineChart(users, now),
         donutChartData: DashboardDonutChartData(
           sections: <DashboardDonutSectionData>[
@@ -144,7 +154,7 @@ class DashboardController {
             ),
           ],
         ),
-        activities: _buildActivities(users, now),
+        activities: activities,
         approvalRate: approvalRate,
         approvedStudents: approvedStudents,
         pendingStudents: pendingStudents,
@@ -209,8 +219,8 @@ class DashboardController {
   ) {
     final List<_DashboardUserSnapshot> sorted = users.toList()
       ..sort((a, b) {
-        final DateTime aTime = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-        final DateTime bTime = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final DateTime aTime = a.lastActivityAt ?? a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final DateTime bTime = b.lastActivityAt ?? b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
         return bTime.compareTo(aTime);
       });
 
@@ -219,11 +229,12 @@ class DashboardController {
       final String roleLabel = _roleLabel(user.role);
       final ActivityStatus status = _activityStatus(user);
 
+      final DateTime? activityTime = user.lastActivityAt ?? user.createdAt;
       return ActivityItem(
         entity: entity,
         action: _activityAction(user),
         role: roleLabel,
-        time: _timeAgo(user.createdAt, now),
+        time: _timeAgo(activityTime, now),
         status: status,
         initials: _initials(entity),
         accentColor: _accentForRole(user.role),
@@ -248,13 +259,22 @@ class DashboardController {
     if (!user.isApproved) {
       return 'Submitted account approval request';
     }
-    if (user.internshipStatus == 'ongoing') {
-      return 'Has an active internship in progress';
+    if (user.role == 'student' && user.isApproved) {
+      if (user.internshipStatus == 'ongoing') {
+        return 'Student internship active';
+      }
+      if (user.internshipStatus == 'completed') {
+        return 'Student internship completed';
+      }
+      return 'Student profile updated';
     }
-    if (user.internshipStatus == 'completed') {
-      return 'Completed internship workflow';
+    if (user.role == 'mentor' && user.isApproved) {
+      return 'Mentor account approved';
     }
-    return 'Profile record updated in the system';
+    if (user.role == 'faculty' && user.isApproved) {
+      return 'Faculty account approved';
+    }
+    return 'User profile updated in the system';
   }
 
   String _roleLabel(String role) {
@@ -322,6 +342,7 @@ class _DashboardUserSnapshot {
     required this.status,
     required this.internshipStatus,
     required this.createdAt,
+    required this.lastActivityAt,
     required this.startDate,
     required this.endDate,
   });
@@ -332,6 +353,7 @@ class _DashboardUserSnapshot {
   final String status;
   final String internshipStatus;
   final DateTime? createdAt;
+  final DateTime? lastActivityAt;
   final DateTime? startDate;
   final DateTime? endDate;
 
@@ -351,6 +373,7 @@ class _DashboardUserSnapshot {
       createdAt: _readDateTime(data['createdAt']),
       startDate: _readDateTime(data['startDate']),
       endDate: _readDateTime(data['endDate']),
+      lastActivityAt: _readDateTime(data['updatedAt']) ?? _readDateTime(data['createdAt']),
     );
   }
 

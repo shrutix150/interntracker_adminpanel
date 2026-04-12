@@ -570,9 +570,17 @@ class MentorRecord {
         .toUpperCase();
   }
 
-  String get primaryGroup => type == MentorType.faculty
-      ? (department ?? 'Unassigned Department')
-      : (company ?? 'Unassigned Company');
+  String get primaryGroup {
+    if (type == MentorType.faculty) {
+      // For faculty mentors, normalize department value
+      final String normalized = (department ?? '').trim();
+      return normalized.isNotEmpty ? normalized : '[No Department Assigned]';
+    } else {
+      // For company mentors, normalize company value
+      final String normalized = (company ?? '').trim();
+      return normalized.isNotEmpty ? normalized : '[No Company Assigned]';
+    }
+  }
 
   String get joinedOnLabel {
     if (createdAt == null) {

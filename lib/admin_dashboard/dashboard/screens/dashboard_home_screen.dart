@@ -78,9 +78,9 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                     color: AppColors.aquamarine,
                   ),
                   _MetricCardData(
-                    title: 'Pending Approvals',
-                    value: stats.pendingApprovals.toString(),
-                    icon: Icons.pending_actions_rounded,
+                    title: 'Total Companies',
+                    value: stats.totalCompanies.toString(),
+                    icon: Icons.business_rounded,
                     color: AppColors.tangerineDream,
                   ),
                   _MetricCardData(
@@ -133,7 +133,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                             color: AppColors.aquamarine,
                           ),
                           _SummaryRowData(
-                            label: 'Queue',
+                            label: 'Queue / awaiting review',
                             value: overview.approvalTurnaroundLabel,
                             color: AppColors.tangerineDream,
                           ),
@@ -267,10 +267,11 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
         totalStudents: 0,
         totalFaculty: 0,
         pendingApprovals: 0,
+        totalCompanies: 0,
         activeInternships: 0,
       ),
       activeThisWeek: 0,
-      approvalTurnaroundLabel: 'No live data yet',
+      approvalTurnaroundLabel: '0 awaiting review',
       lineChartData: const DashboardLineChartData(
         points: <DashboardLinePoint>[],
       ),

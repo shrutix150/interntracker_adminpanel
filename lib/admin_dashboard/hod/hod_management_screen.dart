@@ -72,16 +72,28 @@ class _HodManagementScreenState extends State<HodManagementScreen> {
               final Map<String, _UserRecord> hodByDept =
                   <String, _UserRecord>{};
 
+              // Debug: Log raw user data
+              debugPrint('[HOD] Total users fetched: ${users.length}');
+
               for (final _UserRecord user in users) {
-                final String dept = _normalizeDept(user.dept);
-                if (dept.isNotEmpty) {
-                  departmentNames.add(dept);
+                // Normalize and validate department
+                final String deptRaw = user.dept.trim();
+                
+                // Skip users with invalid/empty departments
+                if (deptRaw.isEmpty) {
+                  debugPrint('[HOD] Skipping user ${user.id} - empty department');
+                  continue;
                 }
 
+                debugPrint('[HOD] Processing user ${user.id}: dept="$deptRaw", isHod=${user.isHod}');
+                departmentNames.add(deptRaw);
+
                 if (user.isHod) {
-                  hodByDept[dept] = user;
+                  hodByDept[deptRaw] = user;
                 }
               }
+
+              debugPrint('[HOD] Final departments collected: ${departmentNames.toList()..sort()}');
 
               final List<String> sortedDepartments = departmentNames.toList()
                 ..sort((a, b) => a.compareTo(b));
@@ -541,9 +553,11 @@ class _HodManagementScreenState extends State<HodManagementScreen> {
     );
   }
 
+  /// Normalize department value. Returns empty string for null/empty input.
+  /// NO FALLBACK to 'Unassigned' - invalid departments must be excluded.
   static String _normalizeDept(String? value) {
     final String normalized = value?.trim() ?? '';
-    return normalized.isEmpty ? 'Unassigned' : normalized;
+    return normalized; // Return empty string for invalid departments
   }
 
   static bool _isEligibleForHod(String role) {

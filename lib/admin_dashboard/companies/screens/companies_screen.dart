@@ -76,61 +76,6 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
                                   onAddCompany: () => _openCompanyDialog(),
                                 ),
                                 const SizedBox(height: 22),
-                                LayoutBuilder(
-                                  builder: (context, statsConstraints) {
-                                    final int columns = _resolveColumns(statsConstraints.maxWidth);
-                                    final double spacing = 16;
-                                    final double cardWidth = (statsConstraints.maxWidth - ((columns - 1) * spacing)) / columns;
-
-                                    return Wrap(
-                                      spacing: spacing,
-                                      runSpacing: spacing,
-                                      children: <Widget>[
-                                        SizedBox(
-                                          width: cardWidth,
-                                          child: CompanyStatCard(
-                                            title: 'Total Companies',
-                                            value: '$totalCompanies',
-                                            subtitle: 'Stored in Firebase',
-                                            icon: Icons.business_rounded,
-                                            accentColor: AppColors.coolSky,
-                                          ),
-                                        ),
-                                        SizedBox(
-                                          width: cardWidth,
-                                          child: CompanyStatCard(
-                                            title: 'Active Partners',
-                                            value: '$activePartners',
-                                            subtitle: 'Active and verified',
-                                            icon: Icons.handshake_rounded,
-                                            accentColor: AppColors.aquamarine,
-                                          ),
-                                        ),
-                                        SizedBox(
-                                          width: cardWidth,
-                                          child: CompanyStatCard(
-                                            title: 'Students Assigned',
-                                            value: '$studentsAssigned',
-                                            subtitle: 'Across all companies',
-                                            icon: Icons.groups_rounded,
-                                            accentColor: AppColors.jasmine,
-                                          ),
-                                        ),
-                                        SizedBox(
-                                          width: cardWidth,
-                                          child: CompanyStatCard(
-                                            title: 'Pending Verifications',
-                                            value: '$pendingVerifications',
-                                            subtitle: 'Need admin review',
-                                            icon: Icons.pending_actions_rounded,
-                                            accentColor: AppColors.strawberryRed,
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                ),
-                                const SizedBox(height: 22),
                                 CompanyFilterBar(
                                   selectedStatus: _selectedStatus,
                                   selectedIndustry: _selectedIndustry,

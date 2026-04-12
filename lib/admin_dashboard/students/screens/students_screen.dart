@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
+import '../models/student_record.dart';
 import 'student_detail_screen.dart';
 import '../widgets/attendance_overview_card.dart';
 import '../widgets/student_filter_bar.dart';
@@ -50,27 +51,16 @@ class _StudentsScreenState extends State<StudentsScreen> {
 
         final List<StudentRecord> students = snapshot.data!;
         final List<StudentRecord> filteredStudents = _filterStudents(students);
+        final _StudentSummaryMetrics summaryMetrics =
+            _computeStudentMetrics(filteredStudents);
         final List<String> departmentOptions = students
             .map((student) => student.department.trim())
-            .where((department) => department.isNotEmpty)
+            .where((department) => department.isNotEmpty && department != 'Unassigned')
             .toSet()
             .toList()
           ..sort();
 
         _syncSelection(students);
-
-        final int totalStudents = students.length;
-        final int activeInternships = students
-            .where((student) => student.status == StudentInternshipStatus.active)
-            .length;
-        final int completedInternships = students
-            .where(
-              (student) => student.status == StudentInternshipStatus.completed,
-            )
-            .length;
-        final int needingAttention = students
-            .where((student) => student.status == StudentInternshipStatus.atRisk)
-            .length;
 
         final int averageAttendance = filteredStudents.isEmpty
             ? 0
@@ -110,80 +100,107 @@ class _StudentsScreenState extends State<StudentsScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
-                                _StudentsHero(totalStudents: totalStudents),
+                                _StudentsHero(
+                                  totalStudents: summaryMetrics.totalStudents,
+                                ),
                                 const SizedBox(height: 22),
                                 LayoutBuilder(
                                   builder: (context, summaryConstraints) {
+                                    const double spacing = 16;
+                                    final List<Widget> cards = <Widget>[
+                                      StudentSummaryCard(
+                                        title: 'Total Students',
+                                        value: '${summaryMetrics.totalStudents}',
+                                        subtitle:
+                                            'Valid student records in the current view',
+                                        icon: Icons.groups_rounded,
+                                        accentColor: AppColors.coolSky,
+                                      ),
+                                      StudentSummaryCard(
+                                        title: 'Active Internships',
+                                        value:
+                                            '${summaryMetrics.activeInternships}',
+                                        subtitle:
+                                            'Date-based internships active today',
+                                        icon: Icons.work_history_rounded,
+                                        accentColor: AppColors.aquamarine,
+                                        animationDelay: const Duration(
+                                          milliseconds: 80,
+                                        ),
+                                      ),
+                                      StudentSummaryCard(
+                                        title: 'Completed Internships',
+                                        value:
+                                            '${summaryMetrics.completedInternships}',
+                                        subtitle:
+                                            'Date-based internships already ended',
+                                        icon: Icons.task_alt_rounded,
+                                        accentColor: AppColors.jasmine,
+                                        animationDelay: const Duration(
+                                          milliseconds: 160,
+                                        ),
+                                      ),
+                                      StudentSummaryCard(
+                                        title: 'Needing Attention',
+                                        value:
+                                            '${summaryMetrics.needingAttention}',
+                                        subtitle:
+                                            'Real risk signals from attendance or logs',
+                                        icon: Icons.priority_high_rounded,
+                                        accentColor: AppColors.strawberryRed,
+                                        animationDelay: const Duration(
+                                          milliseconds: 240,
+                                        ),
+                                      ),
+                                    ];
                                     final int columns = _resolveColumns(
                                       width: summaryConstraints.maxWidth,
                                       minTileWidth: 220,
                                     );
-                                    final double spacing = 16;
-                                    final double cardWidth =
-                                        (summaryConstraints.maxWidth -
-                                                ((columns - 1) * spacing)) /
-                                            columns;
+                                    final int rowCount =
+                                        (cards.length / columns).ceil();
 
-                                    return Wrap(
-                                      spacing: spacing,
-                                      runSpacing: spacing,
-                                      children: <Widget>[
-                                        SizedBox(
-                                          width: cardWidth,
-                                          child: StudentSummaryCard(
-                                            title: 'Total Students',
-                                            value: '$totalStudents',
-                                            subtitle:
-                                                'Across all departments in Firebase',
-                                            icon: Icons.groups_rounded,
-                                            accentColor: AppColors.coolSky,
-                                          ),
-                                        ),
-                                        SizedBox(
-                                          width: cardWidth,
-                                          child: StudentSummaryCard(
-                                            title: 'Active Internships',
-                                            value: '$activeInternships',
-                                            subtitle:
-                                                'Students currently marked ongoing',
-                                            icon: Icons.work_history_rounded,
-                                            accentColor: AppColors.aquamarine,
-                                            animationDelay: const Duration(
-                                              milliseconds: 80,
+                                    return Column(
+                                      children: List<Widget>.generate(
+                                        rowCount,
+                                        (rowIndex) {
+                                          final int start = rowIndex * columns;
+                                          final int end =
+                                              (start + columns).clamp(0, cards.length);
+                                          final List<Widget> rowCards =
+                                              cards.sublist(start, end);
+
+                                          return Padding(
+                                            padding: EdgeInsets.only(
+                                              bottom: rowIndex == rowCount - 1
+                                                  ? 0
+                                                  : spacing,
                                             ),
-                                          ),
-                                        ),
-                                        SizedBox(
-                                          width: cardWidth,
-                                          child: StudentSummaryCard(
-                                            title: 'Completed Internships',
-                                            value: '$completedInternships',
-                                            subtitle:
-                                                'Students who finished successfully',
-                                            icon: Icons.task_alt_rounded,
-                                            accentColor: AppColors.jasmine,
-                                            animationDelay: const Duration(
-                                              milliseconds: 160,
+                                            child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: <Widget>[
+                                                for (int index = 0;
+                                                    index < rowCards.length;
+                                                    index++) ...<Widget>[
+                                                  Expanded(child: rowCards[index]),
+                                                  if (index != rowCards.length - 1)
+                                                    const SizedBox(width: spacing),
+                                                ],
+                                                for (int filler = rowCards.length;
+                                                    filler < columns;
+                                                    filler++) ...<Widget>[
+                                                  const Expanded(
+                                                    child: SizedBox(height: 214),
+                                                  ),
+                                                  if (filler != columns - 1)
+                                                    const SizedBox(width: spacing),
+                                                ],
+                                              ],
                                             ),
-                                          ),
-                                        ),
-                                        SizedBox(
-                                          width: cardWidth,
-                                          child: StudentSummaryCard(
-                                            title: 'Needing Attention',
-                                            value: '$needingAttention',
-                                            subtitle:
-                                                'Students currently flagged at risk',
-                                            icon:
-                                                Icons.priority_high_rounded,
-                                            accentColor:
-                                                AppColors.strawberryRed,
-                                            animationDelay: const Duration(
-                                              milliseconds: 240,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                                          );
+                                        },
+                                      ),
                                     );
                                   },
                                 ),
@@ -348,17 +365,36 @@ class _StudentsScreenState extends State<StudentsScreen> {
       try {
         final List<StudentRecord> students = userDocs
             .map(StudentRecord.fromFirestore)
-            .where((student) => student.isDeleted != true)
+            .where((student) => !student.isDeleted && student.isValidRecord)
             .map(
               (student) {
-                final StudentRecord withAttendance = _applyAttendanceMetrics(
-                  student,
-                  _resolveAttendanceMetrics(student, recordDocs),
+                final _AttendanceMetrics? attendanceMetrics =
+                    _resolveAttendanceMetrics(student, recordDocs);
+                final int? taskProgress =
+                    _resolveTaskProgress(student, taskDocs);
+                final StudentRecord resolvedStudent =
+                    student.computeStudentMetrics(
+                  attendance: attendanceMetrics?.percentage,
+                  weeklyCheckIns: attendanceMetrics?.presentCount,
+                  missedLogs: attendanceMetrics?.absentCount,
+                  attendanceDerivedProgress:
+                      attendanceMetrics?.progressPercentage,
+                  taskDerivedProgress: taskProgress,
                 );
-                return _applyTaskProgress(
-                  withAttendance,
-                  _resolveTaskProgress(withAttendance, taskDocs),
-                );
+                assert(() {
+                  debugPrint(
+                    '[StudentsScreen][StudentDebug] id=${resolvedStudent.id} '
+                    'rawStatus=${resolvedStudent.rawStatusFields} '
+                    'resolvedStatus=${resolvedStudent.status.name} '
+                    'rawProgress=${resolvedStudent.rawProgressFields} '
+                    'resolvedProgress=${resolvedStudent.progress} '
+                    'attendance=${resolvedStudent.attendance} '
+                    'missedLogs=${resolvedStudent.missedLogs} '
+                    'badge=${resolvedStudent.status.label}',
+                  );
+                  return true;
+                }());
+                return resolvedStudent;
               },
             )
             .toList(growable: false);
@@ -409,32 +445,6 @@ class _StudentsScreenState extends State<StudentsScreen> {
     );
 
     return controller.stream;
-  }
-
-  StudentRecord _applyAttendanceMetrics(
-    StudentRecord student,
-    _AttendanceMetrics? attendance,
-  ) {
-    if (attendance == null) {
-      return student;
-    }
-
-    return student.copyWith(
-      attendance: attendance.percentage,
-      weeklyCheckIns: attendance.presentCount,
-      missedLogs: attendance.absentCount,
-    );
-  }
-
-  StudentRecord _applyTaskProgress(
-    StudentRecord student,
-    int? progressPercentage,
-  ) {
-    if (progressPercentage == null) {
-      return student;
-    }
-
-    return student.copyWith(progress: progressPercentage);
   }
 
   _AttendanceMetrics? _resolveAttendanceMetrics(
@@ -573,6 +583,34 @@ class _StudentsScreenState extends State<StudentsScreen> {
           statusMatches &&
           searchMatches;
     }).toList(growable: false);
+  }
+
+  _StudentSummaryMetrics _computeStudentMetrics(List<StudentRecord> students) {
+    final _StudentSummaryMetrics metrics = _StudentSummaryMetrics(
+      totalStudents: students.length,
+      activeInternships: students
+          .where((student) => student.status == StudentInternshipStatus.active)
+          .length,
+      completedInternships: students
+          .where(
+            (student) => student.status == StudentInternshipStatus.completed,
+          )
+          .length,
+      needingAttention: students
+          .where((student) => student.needsAttention)
+          .length,
+    );
+
+    assert(() {
+      debugPrint(
+        '[StudentsScreen][SummaryDebug] filteredTotals='
+        '{total:${metrics.totalStudents}, active:${metrics.activeInternships}, '
+        'completed:${metrics.completedInternships}, atRisk:${metrics.needingAttention}}',
+      );
+      return true;
+    }());
+
+    return metrics;
   }
 
   void _syncSelection(List<StudentRecord> students) {
@@ -945,6 +983,20 @@ class _AttendanceMetrics {
   final int presentCount;
   final int absentCount;
   final int progressPercentage;
+}
+
+class _StudentSummaryMetrics {
+  const _StudentSummaryMetrics({
+    required this.totalStudents,
+    required this.activeInternships,
+    required this.completedInternships,
+    required this.needingAttention,
+  });
+
+  final int totalStudents;
+  final int activeInternships;
+  final int completedInternships;
+  final int needingAttention;
 }
 
 class _AttendanceRecord {
@@ -1440,3 +1492,9 @@ class _NumberField extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+

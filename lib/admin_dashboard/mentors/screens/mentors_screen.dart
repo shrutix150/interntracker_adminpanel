@@ -55,6 +55,12 @@ class _MentorsScreenState extends State<MentorsScreen> {
             .toList()
           ..sort();
 
+        // Debug: Log department collection from mentors
+        debugPrint('[MentorsScreen] Total mentors loaded: ${mentors.length}');
+        debugPrint('[MentorsScreen] Faculty mentors: ${mentors.where((m) => m.type == MentorType.faculty).length}');
+        debugPrint('[MentorsScreen] Departments collected: ${departmentOptions.length}');
+        debugPrint('[MentorsScreen] Department list: $departmentOptions');
+
         _syncSelection(mentors);
 
         final int totalMentors = mentors.length;
