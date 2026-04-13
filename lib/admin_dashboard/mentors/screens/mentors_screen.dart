@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../../../auth/admin_auth_controller.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../widgets/mentor_filter_bar.dart';
@@ -96,6 +97,15 @@ class _MentorsScreenState extends State<MentorsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
                                 _MentorsHero(totalMentors: totalMentors),
+                                const SizedBox(height: 22),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: ElevatedButton.icon(
+                                    onPressed: _openCreateMentorDialog,
+                                    icon: const Icon(Icons.person_add_alt_1_rounded),
+                                    label: const Text('Create Mentor'),
+                                  ),
+                                ),
                                 const SizedBox(height: 22),
                                 LayoutBuilder(
                                   builder: (context, innerConstraints) {
@@ -366,6 +376,170 @@ class _MentorsScreenState extends State<MentorsScreen> {
 
   void _handleMessage(MentorRecord mentor) {
     _showDeleteConfirmation(mentor);
+  }
+
+  Future<void> _openCreateMentorDialog() async {
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+    final TextEditingController nameController = TextEditingController();
+    final TextEditingController emailController = TextEditingController();
+    final TextEditingController passwordController = TextEditingController();
+    final TextEditingController phoneController = TextEditingController();
+    final TextEditingController departmentController = TextEditingController();
+    final TextEditingController employeeIdController = TextEditingController();
+    String mentorType = 'Faculty Mentor';
+    bool saving = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final bool isFacultyMentor = mentorType == 'Faculty Mentor';
+
+            return AlertDialog(
+              title: Text('Create Mentor', style: AppTextStyles.sectionTitle),
+              content: SizedBox(
+                width: 500,
+                child: SingleChildScrollView(
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        _MentorAdminInputField(
+                          controller: nameController,
+                          label: 'Full Name',
+                          required: true,
+                        ),
+                        const SizedBox(height: 12),
+                        _MentorAdminInputField(
+                          controller: emailController,
+                          label: 'Email',
+                          required: true,
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                        const SizedBox(height: 12),
+                        _MentorAdminInputField(
+                          controller: passwordController,
+                          label: 'Password',
+                          required: true,
+                          obscureText: true,
+                        ),
+                        const SizedBox(height: 12),
+                        _MentorAdminInputField(
+                          controller: phoneController,
+                          label: 'Phone Number',
+                          required: true,
+                          keyboardType: TextInputType.phone,
+                        ),
+                        const SizedBox(height: 12),
+                        _MentorAdminInputField(
+                          controller: departmentController,
+                          label: 'Department',
+                          required: isFacultyMentor,
+                        ),
+                        const SizedBox(height: 12),
+                        _MentorAdminInputField(
+                          controller: employeeIdController,
+                          label: 'Employee ID',
+                          required: true,
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          value: mentorType,
+                          decoration: const InputDecoration(
+                            labelText: 'Mentor Type',
+                          ),
+                          items: const <DropdownMenuItem<String>>[
+                            DropdownMenuItem<String>(
+                              value: 'Faculty Mentor',
+                              child: Text('Faculty Mentor'),
+                            ),
+                            DropdownMenuItem<String>(
+                              value: 'Company Mentor',
+                              child: Text('Company Mentor'),
+                            ),
+                          ],
+                          onChanged: saving
+                              ? null
+                              : (value) {
+                                  if (value != null) {
+                                    setDialogState(() => mentorType = value);
+                                  }
+                                },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: saving
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: saving
+                      ? null
+                      : () async {
+                          if (!(formKey.currentState?.validate() ?? false)) {
+                            return;
+                          }
+
+                          setDialogState(() => saving = true);
+
+                          final String role = isFacultyMentor
+                              ? 'faculty'
+                              : 'mentor';
+
+                          try {
+                            await AdminAuthController.instance.createManagedUser(
+                              name: nameController.text.trim(),
+                              email: emailController.text.trim(),
+                              password: passwordController.text.trim(),
+                              role: role,
+                              phoneNumber: phoneController.text.trim(),
+                              department: departmentController.text.trim(),
+                              employeeId: employeeIdController.text.trim(),
+                            );
+
+                            if (!mounted) {
+                              return;
+                            }
+
+                            Navigator.of(dialogContext).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Mentor created successfully'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          } on AdminAuthException catch (error) {
+                            setDialogState(() => saving = false);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(error.message),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        },
+                  child: saving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Create'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _showDeleteConfirmation(MentorRecord mentor) async {
@@ -697,6 +871,36 @@ class _PanelEntrance extends StatelessWidget {
         );
       },
       child: child,
+    );
+  }
+}
+
+class _MentorAdminInputField extends StatelessWidget {
+  const _MentorAdminInputField({
+    required this.controller,
+    required this.label,
+    this.required = false,
+    this.keyboardType,
+    this.obscureText = false,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final bool required;
+  final TextInputType? keyboardType;
+  final bool obscureText;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      obscureText: obscureText,
+      validator: required
+          ? (value) =>
+              (value ?? '').trim().isEmpty ? 'This field is required.' : null
+          : null,
+      decoration: InputDecoration(labelText: label),
     );
   }
 }
